@@ -58,6 +58,7 @@ func (s *ObjectStore) PostInit() error {
   r.Handle("/{BucketName}/", s.DeleteBucket).Methods("DELETE")
 
 	// Object operations
+  r.Handle("/{BucketName}/", s.CreateObjectBrowserUpload).Methods("POST")
   r.Handle("/{BucketName}/{ObjectName:.{1,}}", s.CreateObject).Methods("PUT")
   r.Handle("/{BucketName}/{ObjectName:.{0,}}", s.CreateObject).Methods("POST")
 
@@ -65,8 +66,6 @@ func (s *ObjectStore) PostInit() error {
   r.Handle("/{BucketName}/{ObjectName:.{1,}}", s.GetObject).Methods("GET")
 
   r.Handle("/{BucketName}/{ObjectName:.{1,}}", s.DeleteObject).Methods("DELETE")
-
-	//r.Handle("/{BucketName}/", s.CreateObjectBrowserUpload).Methods("POST")
 
   return nil
 }

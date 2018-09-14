@@ -43,6 +43,7 @@ type Bucket struct {
   Contents []*Content `xml:"Contents"`
 }
 
+// The metadata for each stored object
 type Object struct {
   // The true object name
   Name          string
@@ -54,12 +55,14 @@ type Object struct {
   Length        int
   // ETag
   ETag          string
-  // Actual data
-  //Obj          []byte
 }
 
 const (
-  meta_suffix         = "\001meta"
-  allow_headers       = "Access-Control-Allow-Headers"
-  allow_headers_list  = "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private"
+	// object key suffix used for storing the objects associated metadata
+	meta_suffix         = "\001meta"
+	// The common Access-Control-Allow-Headers header in each response
+	allow_headers       = "Access-Control-Allow-Headers"
+	allow_headers_list  = "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private"
+	// The block size used when reading MultipartForm
+	size_24K = (1 << 20) * 24
 )

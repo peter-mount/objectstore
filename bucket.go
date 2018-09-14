@@ -62,7 +62,7 @@ func (s *ObjectStore) CreateBucket( r *rest.Rest ) error {
 	return nil
 }
 
-// DeleteBucket creates a new S3 bucket in the BoltDB storage.
+// DeleteBucket deletes a S3 bucket in the BoltDB storage.
 func (s *ObjectStore) DeleteBucket( r *rest.Rest ) error {
   bucketName := r.Var("BucketName")
 
@@ -100,10 +100,8 @@ func (s *ObjectStore) HeadBucket( r *rest.Rest ) error {
 		return nil
 	} )
 
-  r.XML().
-    AccessControlAllowOrigin("").
-    AddHeader( allow_headers, allow_headers_list ).
-    Value( "" )
+  r.AccessControlAllowOrigin("").
+    AddHeader( allow_headers, allow_headers_list )
 
   return nil
 }
@@ -150,12 +148,12 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
 		}
 
     r.Status( 200 ).
-    XML().
-    AccessControlAllowOrigin("").
-    AddHeader( allow_headers, allow_headers_list ).
-    AddHeader( "Host", r.Request().Host ).
-    AddHeader( "Location", "/" + bucketName ).
-    Value( bucketc )
+      XML().
+      AccessControlAllowOrigin("").
+      AddHeader( allow_headers, allow_headers_list ).
+      AddHeader( "Host", r.Request().Host ).
+      AddHeader( "Location", "/" + bucketName ).
+      Value( bucketc )
 
     return nil
 	})
