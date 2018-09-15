@@ -60,6 +60,10 @@ type Object struct {
 const (
 	// object key suffix used for storing the objects associated metadata
 	meta_suffix         = "\001meta"
+	// Part suffix, used for multipart upload parts, prefix is the UploadId
+	part_suffix					= "\001part"
+	// Meta suffix used to represent a multipart uplaod
+	partmeta_suffix			= "\001partmeta"
 	// The common Access-Control-Allow-Headers header in each response
 	allow_headers       = "Access-Control-Allow-Headers"
 	allow_headers_list  = "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private"

@@ -12,10 +12,30 @@ import (
   "net/http"
 	"strconv"
   "strings"
+	"log"
 )
 
 // CreateObject creates a new S3 object.
 func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
+	log.Println( "--------------------------------------------------" )
+	log.Println( r.Request().Method, r.Request().URL )
+	for kk,kv := range r.Request().Header {
+		log.Println( kk, kv )
+	}
+
+	// Delegate to multipart if necessary
+	query := r.Request().URL.Query()
+	if _, ok := query["uploads"]; ok {
+		return s.initiateMultipart( r )
+	}
+	if _, ok := query["partNumber"]; ok {
+		return s.uploadPart( r )
+	}
+	if _, ok := query["uploadId"]; ok {
+		return s.completeMultipart( r )
+	}
+
+	log.Println( "CreateObject")
 	bucketName := r.Var( "BucketName" )
   objectName := r.Var( "ObjectName" )
 
@@ -29,6 +49,7 @@ func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
 
 // CreateObjectBrowserUpload creates a new S3 object using a MultipartForm
 func (s *ObjectStore) CreateObjectBrowserUpload( r *rest.Rest ) error {
+	log.Println( "CreateObjectBrowserUpload")
 
 	err := r.Request().ParseMultipartForm( size_24K )
 	if err != nil {
@@ -40,6 +61,7 @@ func (s *ObjectStore) CreateObjectBrowserUpload( r *rest.Rest ) error {
 	key := form.Value["key"][0]
 
 	fileHeader := form.File["file"][0]
+	log.Println( fileHeader )
 	infile, err := fileHeader.Open()
 	if err != nil {
 		return err
@@ -49,27 +71,37 @@ func (s *ObjectStore) CreateObjectBrowserUpload( r *rest.Rest ) error {
 	return s.createObject( r, bucketName, key, form.Value, infile )
 }
 
-func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string, headers map[string][]string, reader io.Reader ) error {
-
+func (s *ObjectStore) getBody( headers map[string][]string, reader io.Reader ) ([]byte, error) {
 	// Read the raw body
 	body, err := ioutil.ReadAll( reader )
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	// If it#s a chunked signed stream then we have to dechunk it to get the original object.
+	if dl, ok := headers[ "X-Amz-Decoded-Content-Length" ]; ok {
+		body, err = s.dechunk( body, dl[0] )
+		if err != nil {
+			return nil, err
+		}
+		log.Println( "Dechunked", dl, len(body) )
+	}
+
+	return body, nil
+}
+
+func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string, headers map[string][]string, reader io.Reader ) error {
+
+	body, err := s.getBody( headers, reader )
+	if err != nil {
+    return err
+  }
 
 	// Extract the headers for the meta-data
 	meta := make(map[string]string)
 	for hk, hv := range headers {
 		if strings.Contains(hk, "X-Amz-") || hk == "Content-Type" {
 			meta[hk] = hv[0]
-		}
-	}
-
-	// If it#s a chunked signed stream then we have to dechunk it to get the original object.
-	if dl, ok := meta[ "X-Amz-Decoded-Content-Length" ]; ok {
-		body, err = s.dechunk( body, dl )
-		if err != nil {
-			return err
 		}
 	}
 
@@ -114,8 +146,8 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
       AddHeader( "Access-Control-Allow-Origin", "*" ).
   		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-			Etag( obj.ETag ).
-  		AddHeader( "Server", "AmazonS3" )
+			AddHeader( "ETag", obj.ETag ).
+			AddHeader( "Server", "AmazonS3" )
 
 		return nil
 	})
