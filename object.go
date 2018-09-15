@@ -22,6 +22,7 @@ func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
 	for kk,kv := range r.Request().Header {
 		log.Println( kk, kv )
 	}
+	log.Println( "--------------------------------------------------" )
 
 	// Delegate to multipart if necessary
 	query := r.Request().URL.Query()

@@ -2,7 +2,7 @@ package objectstore
 
 import (
 	"crypto/md5"
-  "encoding/base64"
+//  "encoding/base64"
   "encoding/hex"
 	"encoding/xml"
   "fmt"
@@ -140,6 +140,7 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
     partKey := uploadId + part_suffix + partNumber
     upload.Parts[partNumber] = partKey
 
+    log.Println( "Body", len(body) )
     if err := b.Put( partKey, body ); err != nil {
       return err
     }
@@ -151,7 +152,11 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
       return err
     }
 
-    checksum := base64.StdEncoding.EncodeToString(body)
+    hash := md5.Sum( body )
+    checksum := hex.EncodeToString(hash[:])
+    //checksum := base64.StdEncoding.EncodeToString(body)
+    log.Println( checksum )
+    log.Println( len(checksum) )
 
     r.Status( 200 ).
       AddHeader( "Access-Control-Allow-Origin", "*" ).
@@ -160,6 +165,7 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
       AddHeader( "Connection", "keep-alive" ).
       AddHeader( "Server", "AmazonS3" ).
       AddHeader( "Content-MD5", checksum ).
+      AddHeader( "Content-Length", "0" ).
       Etag( checksum )
 
     return nil
@@ -168,13 +174,25 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 
 func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
   log.Println( "completeMultipart" )
+  reader, err := r.BodyReader()
+  if err != nil {
+    return err
+  }
 
+  body, err := s.getBody( r.Request().Header, reader )
+  if err != nil {
+    return err
+  }
+
+  log.Printf( "%v", string(body[:]) )
+/*
   req := &CompleteMultipartUpload{}
   err := r.Body( req)
   if err != nil {
     return err
   }
   log.Printf( "%v", req )
+  */
 
   return nil
 }
