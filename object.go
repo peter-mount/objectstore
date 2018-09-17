@@ -214,30 +214,32 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 
 		// Request is asking for a specific range in the object
 		if rng, ok := r.Request().Header["Range"]; ok {
-			s, e, err := expandRangeHeader( rng[0] )
+			st, en, err := expandRangeHeader( rng[0] )
 			if err != nil {
 				return err
 			}
 
-			if s<0 || e<0 || s>t.Length || e>=t.Length {
+			if st<0 || en<0 || st>t.Length || en>=t.Length {
 				// Requested range not satisfiable
 				r.Status( 416 )
 				return nil
 			}
 
-			if e==0 {
-				e = t.Length-1
-				v = v[s:]
+			if en==0 {
+				en = t.Length-1
+				//v = v[s:]
 			} else {
-				v = v[s:e+1]
+				//v = v[s:e+1]
 			}
 
 			// 206 Partial Content
 			r.Status( 206 ).
-				AddHeader( "Content-Range", fmt.Sprintf( "bytes %d-%d/%d", s, e, t.Length ) )
+				AddHeader( "Content-Range", fmt.Sprintf( "bytes %d-%d/%d", st, en, t.Length ) ).
+				Reader( t.getPartialReader( s, bucketName, st, en ) )
 		} else {
-			// No range requested so status 200
-			r.Status( 200 )
+			// No range requested so status 200 & return the entire object
+			r.Status( 200 ).
+				Reader( t.getReader( s, bucketName ) )
 		}
 
 		t.addHeaders( r )
@@ -251,8 +253,8 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
 			AddHeader( "Last-Modified", t.LastModified.Format(http.TimeFormat) ).
 			Etag( t.ETag ).
-			AddHeader( "Server", "AmazonS3" ).
-			Value( v )
+			AddHeader( "Server", "AmazonS3" )
+			//Value( v )
 
 		return nil
 	})
