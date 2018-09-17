@@ -1,24 +1,15 @@
 package objectstore
 
 import (
-	"crypto/md5"
-	"encoding/hex"
   "fmt"
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
-	"gopkg.in/mgo.v2/bson"
 	"io"
   "io/ioutil"
   "net/http"
 	"strconv"
   "strings"
 )
-
-// etag calculates the object's etag
-func etag( d []byte ) string {
-	hash := md5.Sum( d )
-	return hex.EncodeToString(hash[:])
-}
 
 // CreateObject creates a new S3 object.
 func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
@@ -111,11 +102,6 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
 
   meta["Last-Modified"] = obj.LastModified.Format("Mon, 2 Jan 2006 15:04:05 MST")
 
-  metadata, err := bson.Marshal(obj)
-  if err != nil {
-    return err
-  }
-
 	return s.boltService.Update( func( tx *bolt.Tx ) error {
 		b := tx.Bucket( bucketName )
 		if b == nil {
@@ -123,15 +109,8 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
 			return nil
 		}
 
-		// Store the metadata separately from the body
-		err = b.Put( objectName + meta_suffix, metadata )
+		err := obj.put( b, body )
 		if err != nil {
-      return err
-		}
-
-		err = b.Put( objectName, body )
-		if err != nil {
-      b.Delete( objectName + meta_suffix )
       return err
 		}
 
@@ -169,17 +148,16 @@ func (s *ObjectStore) HeadObject( r *rest.Rest ) error {
 		}
 
     // Get the metadata
-		v := b.Get( objectName + meta_suffix )
-		if v == nil {
+		t := Object{}
+		exists, err := t.get( b, objectName )
+		if !exists  {
       r.Status( 404 )
       // TODO gofakes returned 500 here
 			return nil
 		}
-
-		t := Object{}
-		err := bson.Unmarshal(v, &t)
 		if err != nil {
-      return err
+      r.Status( 500 )
+			return err
 		}
 
     r.Status( 200 ).
@@ -203,10 +181,10 @@ func (s *ObjectStore) HeadObject( r *rest.Rest ) error {
 
 // GetObject retrievs a bucket object.
 func (s *ObjectStore) GetObject( r *rest.Rest ) error {
-	bucketName := r.Var( "BucketName" )
-  objectName := r.Var( "ObjectName" )
-
 	return s.boltService.View( func( tx *bolt.Tx ) error {
+		bucketName := r.Var( "BucketName" )
+		objectName := r.Var( "ObjectName" )
+
     b := tx.Bucket( bucketName )
 		if b == nil {
       r.Status( 404 )
@@ -214,21 +192,20 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 		}
 
     // Get the metadata
-		v := b.Get( objectName + meta_suffix )
-		if v == nil {
+		t := Object{}
+		exists, err := t.get( b, objectName )
+		if !exists  {
       r.Status( 404 )
       // TODO gofakes returned 500 here
 			return nil
 		}
-
-		t := Object{}
-		err := bson.Unmarshal(v, &t)
 		if err != nil {
-      return err
+      r.Status( 500 )
+			return err
 		}
 
     // Get the actual object
-    v = b.Get( objectName )
+    v := t.getObject( b )
 		if v == nil {
       r.Status( 404 )
       // TODO gofakes returned 500 here
@@ -293,8 +270,10 @@ func (s *ObjectStore) DeleteObject( r *rest.Rest ) error {
       return nil
 		}
 
-		b.Delete( objectName + meta_suffix )
-    b.Delete( objectName )
+		t := Object{}
+		if exists, _ := t.get( b, objectName ); exists {
+			t.delete( b )
+		}
 
     r.Status( 204 ).
       AccessControlAllowOrigin("").

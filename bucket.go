@@ -3,7 +3,6 @@ package objectstore
 import (
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
-	"gopkg.in/mgo.v2/bson"
   "strings"
   "time"
 )
@@ -132,8 +131,7 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
 		for k, v := c.First(); k != ""; k, v = c.Next() {
 			if strings.Contains( k, prefix ) && strings.HasSuffix( k, meta_suffix ){
         t := Object{}
-        err := bson.Unmarshal(v, &t)
-        if err != nil {
+        if _, err := t.getBytes( v ); err != nil {
           return err
         }
 

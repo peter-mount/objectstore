@@ -11,6 +11,7 @@ import (
   "github.com/peter-mount/golib/rest"
   "gopkg.in/mgo.v2/bson"
   "time"
+  "log"
 )
 
 type MultipartUpload struct {
@@ -97,11 +98,15 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
     hash := md5.Sum( []byte(fullName) )
     uploadId := hex.EncodeToString(hash[:])
 
+    log.Println( bucketName, objectName, fullName, uploadId )
+
     upload := &MultipartUpload{ objectName, uploadId, make( map[string]string), startTime }
     err := upload.put( b )
     if err != nil {
       return err
     }
+
+    log.Println( upload )
 
     r.Status( 200 ).
       AddHeader( "Access-Control-Allow-Origin", "*" ).
@@ -247,10 +252,6 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
     }
 
     db := buf.Bytes()
-    err := b.Put( upload.ObjectName, db )
-    if err != nil {
-      return err
-    }
 
     meta := make(map[string]string)
   	obj := &Object{
@@ -260,22 +261,14 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
       len( db ),
       etag( db ),
     }
-    meta["Last-Modified"] = obj.LastModified.Format("Mon, 2 Jan 2006 15:04:05 MST")
 
-    metadata, err := bson.Marshal(obj)
-    if err != nil {
-      return err
-    }
-
-    err = b.Put( upload.ObjectName + meta_suffix, metadata )
-    if err != nil {
-      return err
-    }
+    err = obj.put( b, db )
 
     err = upload.delete( b )
     if err != nil {
       return err
     }
+    log.Println( obj )
 
     r.Status( 200 ).
       XML().

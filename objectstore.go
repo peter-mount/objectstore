@@ -43,20 +43,6 @@ type Bucket struct {
   Contents []*Content `xml:"Contents"`
 }
 
-// The metadata for each stored object
-type Object struct {
-  // The true object name
-  Name          string
-  // Metadata
-  Metadata      map[string]string
-  // When last modified
-  LastModified  time.Time
-  // Length
-  Length        int
-  // ETag
-  ETag          string
-}
-
 const (
 	// object key suffix used for storing the objects associated metadata
 	meta_suffix         = "\001meta"
