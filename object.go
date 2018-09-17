@@ -239,7 +239,7 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 			// 206 Partial Content
 			r.Status( 206 ).
 				AddHeader( "Content-Range", fmt.Sprintf( "bytes %d-%d/%d", st, en, t.Length ) ).
-				//AddHeader( "Content-Length", fmt.Sprintf( "%v", en - st + 1 ) ).
+				AddHeader( "Content-Length", fmt.Sprintf( "%v", en - st + 1 ) ).
 				Reader( t.getPartialReader( s, bucketName, st, en ) )
 		} else {
 			// No range requested so status 200 & return the entire object

@@ -51,12 +51,30 @@ func (o *Object) getReader( store *ObjectStore, bucketName string ) *ObjectReade
 // the requested range
 func (o *Object) getPartialReader( store *ObjectStore, bucketName string, s, e int ) *ObjectReader {
   r := o.getReader( store, bucketName )
-  r.offset = s
-  l := e - s
+
+  r.offset = 0
+  l := e - s + 1
   r.remaining = r.remaining - s
   if r.remaining > l {
     r.remaining = l
   }
+
+  // Find the first part containing the requested range
+  if s > 0 {
+    for i, part := range o.Parts {
+      p := r.offset + part.Length
+      if s >= p {
+        // Start is not in this part so move to next one
+        r.offset += part.Length
+        r.partNumber = i
+      } else {
+        // Start is within this part
+        r.pos = s - r.offset
+        break
+      }
+    }
+  }
+
   return r
 }
 
@@ -99,7 +117,7 @@ func (r *ObjectReader) getNextBlock() error {
       return io.EOF
 		}
 
-    r.partNumber++
+    r.partNumber = r.partNumber + 1
     d := r.obj.getPart( b, r.partNumber )
     if d == nil {
       return io.EOF
@@ -109,7 +127,15 @@ func (r *ObjectReader) getNextBlock() error {
       r.offset += len( r.data )
     }
 
-    r.data = d
+    // As the returned value is technically only valid during the lifetime of
+    // the transaction we need to make a copy of it otherwise it can end up
+    // pointing to different data or can point to invalid memory which will cause a panic
+    // see Caveats in the bbolt documentation
+    if r.data == nil || len(r.data) != len(d) {
+      r.data = make([]byte, len(d))
+    }
+    copy( r.data, d )
+
     r.pos = 0
 
     return nil
