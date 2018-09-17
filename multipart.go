@@ -1,9 +1,7 @@
 package objectstore
 
 import (
-  "bytes"
 	"crypto/md5"
-//  "encoding/base64"
   "encoding/hex"
 	"encoding/xml"
   "fmt"
@@ -11,7 +9,6 @@ import (
   "github.com/peter-mount/golib/rest"
   "gopkg.in/mgo.v2/bson"
   "time"
-  "log"
 )
 
 type MultipartUpload struct {
@@ -98,15 +95,11 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
     hash := md5.Sum( []byte(fullName) )
     uploadId := hex.EncodeToString(hash[:])
 
-    log.Println( bucketName, objectName, fullName, uploadId )
-
     upload := &MultipartUpload{ objectName, uploadId, make( map[string]string), startTime }
     err := upload.put( b )
     if err != nil {
       return err
     }
-
-    log.Println( upload )
 
     r.Status( 200 ).
       AddHeader( "Access-Control-Allow-Origin", "*" ).
@@ -222,15 +215,21 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
 			return nil
 		}
 
-    // Validate we have all of the parts, do this now before trying to read them
-    for _, p := range req.Parts {
-      if _, exist := upload.Parts[ p.PartNumber ]; !exist {
-        r.Status( 500 )
-  			return fmt.Errorf( "Missing part uploadId %s part %s", uploadId, p.PartNumber )
-      }
+    meta := make(map[string]string)
+    obj := &Object{
+      upload.ObjectName,
+      meta,
+      s.timeNow(),
+      0,
+      "",
+      nil,
     }
 
-    var buf bytes.Buffer
+    // Delete the upload on exit
+    defer upload.delete( b )
+
+    // Now add the parts to the final object
+    hash := md5.New()
     for _, p := range req.Parts {
       n := upload.Parts[ p.PartNumber ]
 
@@ -240,35 +239,23 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
   			return fmt.Errorf( "Missing data for part uploadId %s part %s name %s", uploadId, p.PartNumber, n )
       }
 
-      dl, err := buf.Write( d )
+      // Write this part
+      err = obj.putPart( b, d )
       if err != nil {
         return err
       }
 
-      if dl != len(d) {
-        r.Status( 500 )
-  			return fmt.Errorf( "Wrote %d/%d of %s part %s", dl, len(d), uploadId, p.PartNumber )
-      }
+      // Add it to the hash
+      hash.Write( d )
     }
 
-    db := buf.Bytes()
+    obj.ETag = hex.EncodeToString(hash.Sum(nil)[:])
 
-    meta := make(map[string]string)
-  	obj := &Object{
-      upload.ObjectName,
-      meta,
-      s.timeNow(),
-      len( db ),
-      etag( db ),
-    }
-
-    err = obj.put( b, db )
-
-    err = upload.delete( b )
+    // Save the metadata
+    err = obj.put( b )
     if err != nil {
       return err
     }
-    log.Println( obj )
 
     r.Status( 200 ).
       XML().

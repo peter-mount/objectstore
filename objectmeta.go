@@ -3,6 +3,7 @@ package objectstore
 import (
 	"crypto/md5"
 	"encoding/hex"
+  "fmt"
   "github.com/peter-mount/golib/kernel/bolt"
 	"gopkg.in/mgo.v2/bson"
   "time"
@@ -20,6 +21,17 @@ type Object struct {
   Length        int
   // ETag
   ETag          string
+  // The parts
+  Parts       []ObjectPart
+}
+
+type ObjectPart struct {
+  // The part number
+  PartNumber    int
+  // The start position in the object
+  Start         int
+  // The length of this part
+  Length        int
 }
 
 // etag calculates the object's etag
@@ -29,7 +41,7 @@ func etag( d []byte ) string {
 }
 
 // Put an object's metadata and it's content
-func (o *Object) put( b *bolt.Bucket, body []byte ) error {
+func (o *Object) put( b *bolt.Bucket ) error {
 	o.Metadata["Last-Modified"] = o.LastModified.Format("Mon, 2 Jan 2006 15:04:05 MST")
 
 	metadata, err := bson.Marshal( o )
@@ -37,20 +49,21 @@ func (o *Object) put( b *bolt.Bucket, body []byte ) error {
 		return err
 	}
 
-	err = b.Put( o.Name + meta_suffix, metadata )
-	if err != nil {
-		return err
-	}
+	return b.Put( o.Name + meta_suffix, metadata )
+}
 
-	if body != nil {
-		err = b.Put( o.Name, body )
-		if err != nil {
-			b.Delete( o.Name + meta_suffix )
-			return err
-		}
-	}
+func (o *Object) putPart( b *bolt.Bucket, body []byte ) error {
+  partNo := len( o.Parts )
 
-	return nil
+  o.Parts = append( o.Parts, ObjectPart{ partNo, o.Length, len(body) } )
+
+  l := 0
+  for _, p := range o.Parts {
+    l += p.Length
+  }
+  o.Length = l
+
+  return b.Put( fmt.Sprintf( "%s\003%d", o.Name, partNo ), body )
 }
 
 // get retrieves an object's metadata
@@ -70,13 +83,16 @@ func (o *Object) getBytes( v []byte ) (bool,error) {
 }
 
 // getObject returns the entire object a a byte slice
-func (o *Object) getObject( b *bolt.Bucket ) []byte {
-	return b.Get( o.Name )
+func (o *Object) getPart( b *bolt.Bucket, partNumber int ) []byte {
+  return b.Get( fmt.Sprintf( "%s\003%d", o.Name, partNumber ) )
 }
 
 // delete Deletes an object and it's metadata
 func (o *Object) delete( b *bolt.Bucket ) error {
 	b.Delete( o.Name + meta_suffix )
-	b.Delete( o.Name )
+  for _, p := range o.Parts {
+    b.Delete( fmt.Sprintf( "%s\003%d", o.Name, p.PartNumber ) )
+  }
+  o.Parts = []ObjectPart{}
 	return nil
 }

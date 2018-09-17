@@ -41,7 +41,7 @@ func (o *Object) getReader( store *ObjectStore, bucketName string ) *ObjectReade
     bucketName,
     o,
     // Default to the entire object
-    1, 0, o.Length,
+    -1, 0, o.Length,
     // marker to say no data
     -1, nil,
   }
@@ -93,15 +93,20 @@ func (r *ObjectReader) Read( p []byte ) (int, error) {
 }
 
 func (r *ObjectReader) getNextBlock() error {
-  // For now read entire object
   return r.store.boltService.View( func( tx *bolt.Tx ) error {
     b := tx.Bucket( r.bucketName )
 		if b == nil {
       return io.EOF
 		}
-    d := b.Get( r.obj.Name )
+
+    r.partNumber++
+    d := r.obj.getPart( b, r.partNumber )
     if d == nil {
       return io.EOF
+    }
+
+    if r.data != nil {
+      r.offset += len( r.data )
     }
 
     r.data = d

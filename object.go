@@ -92,16 +92,6 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
 		}
 	}
 
-	obj := &Object{
-    objectName,
-    meta,
-    s.timeNow(),
-    len( body ),
-    etag( body ),
-  }
-
-  meta["Last-Modified"] = obj.LastModified.Format("Mon, 2 Jan 2006 15:04:05 MST")
-
 	return s.boltService.Update( func( tx *bolt.Tx ) error {
 		b := tx.Bucket( bucketName )
 		if b == nil {
@@ -109,7 +99,29 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
 			return nil
 		}
 
-		err := obj.put( b, body )
+		// Remove any existing object
+		obj := &Object{}
+		if exists, _ := obj.get( b, objectName ); exists {
+			obj.delete( b )
+		}
+
+		// Now create our new object
+		obj = &Object{
+	    objectName,
+	    meta,
+	    s.timeNow(),
+			0,
+	    etag( body ),
+			nil,
+		}
+
+		// Add the sole part
+		err := obj.putPart( b, body )
+		if err != nil {
+      return err
+		}
+
+		err = obj.put( b )
 		if err != nil {
       return err
 		}
@@ -204,14 +216,6 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 			return err
 		}
 
-    // Get the actual object
-    v := t.getObject( b )
-		if v == nil {
-      r.Status( 404 )
-      // TODO gofakes returned 500 here
-			return nil
-		}
-
 		// Request is asking for a specific range in the object
 		if rng, ok := r.Request().Header["Range"]; ok {
 			st, en, err := expandRangeHeader( rng[0] )
@@ -235,10 +239,12 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 			// 206 Partial Content
 			r.Status( 206 ).
 				AddHeader( "Content-Range", fmt.Sprintf( "bytes %d-%d/%d", st, en, t.Length ) ).
+				//AddHeader( "Content-Length", fmt.Sprintf( "%v", en - st + 1 ) ).
 				Reader( t.getPartialReader( s, bucketName, st, en ) )
 		} else {
 			// No range requested so status 200 & return the entire object
 			r.Status( 200 ).
+				AddHeader( "Content-Length", fmt.Sprintf( "%v", t.Length ) ).
 				Reader( t.getReader( s, bucketName ) )
 		}
 
@@ -248,8 +254,7 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
       AddHeader( allow_headers, allow_headers_list ).
 			CacheControl( -1 ).
 			AddHeader( "Accept-Ranges", "bytes" ).
-			AddHeader( "Content-Length", fmt.Sprintf("%v", len(v) ) ).
-  		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
+			AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
 			AddHeader( "Last-Modified", t.LastModified.Format(http.TimeFormat) ).
 			Etag( t.ETag ).
