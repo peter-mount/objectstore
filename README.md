@@ -1,6 +1,6 @@
 # objectstore
 
-A prototype object store written in go using the S3 protocol using the bbolt object database as the backend.
+A prototype object store written in go using the S3 protocol using the [bbolt](https://github.com/etcd-io/bbolt) object database as the backend.
 
 It is loosely based on [gofakes3](https://github.com/johannesboyne/gofakes3) by johannesboyne but converted to use both of my kernel & rest frameworks, making it not just standalone but embedable within other projects. It also stores objects differently to return the correct object sizes when listing them and to reduce the memory footprint when listing large objects.
 

@@ -5,7 +5,6 @@ import (
   "github.com/peter-mount/golib/rest"
   "strings"
   "time"
-  "log"
 )
 
 // GetBuckets returns a list of all Buckets
@@ -51,7 +50,6 @@ func (s *ObjectStore) CreateBucket( r *rest.Rest ) error {
     }
 
     _, err := tx.CreateBucket( bucketName )
-    log.Println( err )
     return err
   })
 
