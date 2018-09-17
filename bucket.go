@@ -5,6 +5,7 @@ import (
   "github.com/peter-mount/golib/rest"
   "strings"
   "time"
+  "log"
 )
 
 // GetBuckets returns a list of all Buckets
@@ -41,8 +42,16 @@ func (s *ObjectStore) GetBuckets( r *rest.Rest ) error {
 func (s *ObjectStore) CreateBucket( r *rest.Rest ) error {
 	bucketName := r.Var("BucketName")
 
+  exists := false
   err := s.boltService.Update( func ( tx *bolt.Tx ) error {
+    b := tx.Bucket( bucketName )
+    if b != nil {
+      exists = true
+      return nil;
+    }
+
     _, err := tx.CreateBucket( bucketName )
+    log.Println( err )
     return err
   })
 
@@ -50,13 +59,15 @@ func (s *ObjectStore) CreateBucket( r *rest.Rest ) error {
     return err
   }
 
-  r.Status( 200 ).
-    XML().
+  if exists {
+    r.Status( 409 )
+  } else {
+    r.Status( 200 ).
     AccessControlAllowOrigin("").
     AddHeader( allow_headers, allow_headers_list ).
     AddHeader( "Host", r.Request().Host ).
-    AddHeader( "Location", "/" + bucketName ).
-    Value("")
+    AddHeader( "Location", "/" + bucketName )
+  }
 
 	return nil
 }
