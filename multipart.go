@@ -1,6 +1,7 @@
 package objectstore
 
 import (
+  "bytes"
 	"crypto/md5"
 //  "encoding/base64"
   "encoding/hex"
@@ -10,16 +11,18 @@ import (
   "github.com/peter-mount/golib/rest"
   "gopkg.in/mgo.v2/bson"
   "time"
-	"log"
 )
 
 type MultipartUpload struct {
-	UploadId  string
+	// Final object name for this upload
+	ObjectName	string
+	// Generated uploadId
+	UploadId  	string
 	// Index of uploaded parts
-	Parts		  map[string]string
+	Parts		  	map[string]string
   // Time of when upload was initiated.
   // TODO this is for future use, we'll use this to cleanup incomplete uploads
-  Time      time.Time
+  Time      	time.Time
 }
 
 func (u *MultipartUpload) get( b *bolt.Bucket, uploadId string ) (bool,error) {
@@ -41,6 +44,13 @@ func (u *MultipartUpload) put( b *bolt.Bucket ) error {
   return b.Put( u.UploadId + partmeta_suffix, v )
 }
 
+func (u *MultipartUpload) delete( b *bolt.Bucket ) error {
+	for _,n := range u.Parts {
+		b.Delete( n )
+	}
+	return b.Delete( u.UploadId + partmeta_suffix )
+}
+
 type InitiateMultipartUploadResult struct {
   XMLName   xml.Name  `xml:"InitiateMultipartUploadResult"`
   Xmlns     string    `xml:"xmlns,attr"`
@@ -54,10 +64,18 @@ type CompleteMultipartUpload struct {
   Parts     []MultipartUploadPart `xml:"Part"`
 }
 
+type CompleteMultipartUploadResult struct {
+	XMLName   xml.Name              `xml:"CompleteMultipartUploadResult"`
+	Location	string
+	Bucket		string
+	Key				string
+	ETag			string
+}
+
 type MultipartUploadPart struct {
   XMLName   xml.Name  `xml:"Part"`
-  PartNumber  string    `xml:"PartNumber"`
-  ETag        string    `xml:"ETag"`
+  PartNumber  string  `xml:"PartNumber"`
+  ETag        string  `xml:"ETag"`
 }
 
 // initiateMultipart initiates a multipart upload
@@ -79,9 +97,7 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
     hash := md5.Sum( []byte(fullName) )
     uploadId := hex.EncodeToString(hash[:])
 
-    log.Println( "initiateMultipart", bucketName, objectName, uploadId )
-
-    upload := &MultipartUpload{ uploadId, make( map[string]string), startTime }
+    upload := &MultipartUpload{ objectName, uploadId, make( map[string]string), startTime }
     err := upload.put( b )
     if err != nil {
       return err
@@ -118,7 +134,7 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 
   return s.boltService.Update( func( tx *bolt.Tx ) error {
     bucketName := r.Var( "BucketName" )
-    //objectName := r.Var( "ObjectName" )
+
   	query := r.Request().URL.Query()
     partNumber := query["partNumber"][0]
     uploadId := query["uploadId"][0]
@@ -132,7 +148,6 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
     // Get the metadata
     upload := MultipartUpload{}
     if ok, err := upload.get( b, uploadId ); !ok || err != nil {
-      log.Println( "Not found", uploadId )
       r.Status( 404 )
 			return nil
 		}
@@ -140,23 +155,16 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
     partKey := uploadId + part_suffix + partNumber
     upload.Parts[partNumber] = partKey
 
-    log.Println( "Body", len(body) )
     if err := b.Put( partKey, body ); err != nil {
       return err
     }
-
-    log.Println( "UploadPart", partNumber, partKey)
 
     if err := upload.put( b ); err != nil {
       b.Delete( partKey )
       return err
     }
 
-    hash := md5.Sum( body )
-    checksum := hex.EncodeToString(hash[:])
-    //checksum := base64.StdEncoding.EncodeToString(body)
-    log.Println( checksum )
-    log.Println( len(checksum) )
+    checksum := etag( body )
 
     r.Status( 200 ).
       AddHeader( "Access-Control-Allow-Origin", "*" ).
@@ -173,7 +181,12 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 }
 
 func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
-  log.Println( "completeMultipart" )
+  bucketName := r.Var( "BucketName" )
+
+  query := r.Request().URL.Query()
+  uploadId := query["uploadId"][0]
+
+  // Get payload
   reader, err := r.BodyReader()
   if err != nil {
     return err
@@ -184,15 +197,95 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
     return err
   }
 
-  log.Printf( "%v", string(body[:]) )
-/*
   req := &CompleteMultipartUpload{}
-  err := r.Body( req)
+  err = xml.Unmarshal( body, req )
   if err != nil {
     return err
   }
-  log.Printf( "%v", req )
-  */
 
-  return nil
+  return s.boltService.Update( func( tx *bolt.Tx ) error {
+    b := tx.Bucket( bucketName )
+    if b == nil {
+      r.Status( 404 )
+      return nil
+    }
+
+    // Get the metadata
+    upload := MultipartUpload{}
+    if ok, err := upload.get( b, uploadId ); !ok || err != nil {
+      r.Status( 404 )
+			return nil
+		}
+
+    // Validate we have all of the parts, do this now before trying to read them
+    for _, p := range req.Parts {
+      if _, exist := upload.Parts[ p.PartNumber ]; !exist {
+        r.Status( 500 )
+  			return fmt.Errorf( "Missing part uploadId %s part %s", uploadId, p.PartNumber )
+      }
+    }
+
+    var buf bytes.Buffer
+    for _, p := range req.Parts {
+      n := upload.Parts[ p.PartNumber ]
+
+      d := b.Get( n )
+      if d == nil {
+        r.Status( 500 )
+  			return fmt.Errorf( "Missing data for part uploadId %s part %s name %s", uploadId, p.PartNumber, n )
+      }
+
+      dl, err := buf.Write( d )
+      if err != nil {
+        return err
+      }
+
+      if dl != len(d) {
+        r.Status( 500 )
+  			return fmt.Errorf( "Wrote %d/%d of %s part %s", dl, len(d), uploadId, p.PartNumber )
+      }
+    }
+
+    db := buf.Bytes()
+    err := b.Put( upload.ObjectName, db )
+    if err != nil {
+      return err
+    }
+
+    meta := make(map[string]string)
+  	obj := &Object{
+      upload.ObjectName,
+      meta,
+      s.timeNow(),
+      len( db ),
+      etag( db ),
+    }
+    meta["Last-Modified"] = obj.LastModified.Format("Mon, 2 Jan 2006 15:04:05 MST")
+
+    metadata, err := bson.Marshal(obj)
+    if err != nil {
+      return err
+    }
+
+    err = b.Put( upload.ObjectName + meta_suffix, metadata )
+    if err != nil {
+      return err
+    }
+
+    err = upload.delete( b )
+    if err != nil {
+      return err
+    }
+
+    r.Status( 200 ).
+      XML().
+      Value( &CompleteMultipartUploadResult{
+        Location: "///",
+        Bucket: bucketName,
+        Key: obj.Name,
+        ETag: obj.ETag,
+      })
+
+    return nil
+  } )
 }

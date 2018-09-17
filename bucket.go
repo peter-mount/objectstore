@@ -6,7 +6,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
   "strings"
   "time"
-  "log"
 )
 
 // GetBuckets returns a list of all Buckets
@@ -131,7 +130,6 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
 		c := b.Cursor()
 
 		for k, v := c.First(); k != ""; k, v = c.Next() {
-      log.Println( k )
 			if strings.Contains( k, prefix ) && strings.HasSuffix( k, meta_suffix ){
         t := Object{}
         err := bson.Unmarshal(v, &t)

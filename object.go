@@ -12,17 +12,16 @@ import (
   "net/http"
 	"strconv"
   "strings"
-	"log"
 )
+
+// etag calculates the object's etag
+func etag( d []byte ) string {
+	hash := md5.Sum( d )
+	return hex.EncodeToString(hash[:])
+}
 
 // CreateObject creates a new S3 object.
 func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
-	log.Println( "--------------------------------------------------" )
-	log.Println( r.Request().Method, r.Request().URL )
-	for kk,kv := range r.Request().Header {
-		log.Println( kk, kv )
-	}
-	log.Println( "--------------------------------------------------" )
 
 	// Delegate to multipart if necessary
 	query := r.Request().URL.Query()
@@ -36,7 +35,6 @@ func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
 		return s.completeMultipart( r )
 	}
 
-	log.Println( "CreateObject")
 	bucketName := r.Var( "BucketName" )
   objectName := r.Var( "ObjectName" )
 
@@ -50,7 +48,6 @@ func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
 
 // CreateObjectBrowserUpload creates a new S3 object using a MultipartForm
 func (s *ObjectStore) CreateObjectBrowserUpload( r *rest.Rest ) error {
-	log.Println( "CreateObjectBrowserUpload")
 
 	err := r.Request().ParseMultipartForm( size_24K )
 	if err != nil {
@@ -62,7 +59,6 @@ func (s *ObjectStore) CreateObjectBrowserUpload( r *rest.Rest ) error {
 	key := form.Value["key"][0]
 
 	fileHeader := form.File["file"][0]
-	log.Println( fileHeader )
 	infile, err := fileHeader.Open()
 	if err != nil {
 		return err
@@ -85,7 +81,6 @@ func (s *ObjectStore) getBody( headers map[string][]string, reader io.Reader ) (
 		if err != nil {
 			return nil, err
 		}
-		log.Println( "Dechunked", dl, len(body) )
 	}
 
 	return body, nil
@@ -106,15 +101,12 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
 		}
 	}
 
-	// The object's Etag
-	hash := md5.Sum( body )
-
 	obj := &Object{
     objectName,
     meta,
     s.timeNow(),
     len( body ),
-    "\"" + hex.EncodeToString(hash[:]) + "\"",
+    etag( body ),
   }
 
   meta["Last-Modified"] = obj.LastModified.Format("Mon, 2 Jan 2006 15:04:05 MST")
@@ -147,7 +139,7 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
       AddHeader( "Access-Control-Allow-Origin", "*" ).
   		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-			AddHeader( "ETag", obj.ETag ).
+			Etag( obj.ETag ).
 			AddHeader( "Server", "AmazonS3" )
 
 		return nil
