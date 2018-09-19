@@ -4,10 +4,12 @@ import (
 	"encoding/xml"
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
+  "github.com/peter-mount/objectstore/auth"
   "time"
 )
 
 type ObjectStore struct {
+	authService		*auth.AuthService
   boltService    *bolt.BoltService
   restService    *rest.Server
 	timeLocation   *time.Location

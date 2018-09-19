@@ -1,0 +1,21 @@
+# This is an example config file for objectstore.
+# You don't need to use this if you are running the store unauthenticated
+# but you will need it if you want to lock down the server.
+
+# The root user - this user can do anything on the server
+rootUser:
+  # The API access & secret keys
+  accessKey: "BKIKJAA5BMMU2RHO6IBB"
+  secretKey: "V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12"
+
+# This is a map of individual users who can have separate permissions assigned
+# to them.
+#
+# It is a map of accessKey and then the user object.
+# Note: Don't set the accessKey in the user entry, it will be replaced by the
+# key in the users map.
+# Also using the root user here will do nothing.
+users:
+  # An example user
+  #"BKIKJAA5BMMU2RHO6IBB":
+  #  secretKey: "V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12"

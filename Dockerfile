@@ -19,9 +19,10 @@ RUN apk add --no-cache \
 
 # Ensure we have the libraries - docker will cache these between builds
 RUN go get -v \
-      github.com/minio/minio-go/pkg/s3signer \
       github.com/peter-mount/golib/... \
-      gopkg.in/mgo.v2/bson
+      gopkg.in/mgo.v2/bson \
+      gopkg.in/robfig/cron.v2 \
+      gopkg.in/yaml.v2
 
 # ============================================================
 # source container contains the source as it exists within the

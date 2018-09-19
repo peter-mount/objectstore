@@ -4,6 +4,7 @@ import (
   "github.com/peter-mount/golib/kernel"
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
+  "github.com/peter-mount/objectstore/auth"
   "time"
 )
 
@@ -30,6 +31,12 @@ func (s *ObjectStore) Init( k *kernel.Kernel ) error {
     return err
   }
   s.restService = (service).(*rest.Server)
+
+  service, err = k.AddService( &auth.AuthService{} )
+  if err != nil {
+    return err
+  }
+  s.authService = (service).(*auth.AuthService)
 
   return nil
 }
