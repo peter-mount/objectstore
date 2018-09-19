@@ -135,23 +135,23 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
 			return nil
 		}
 
+    // prefix with our meta_prefix prefixed to it
+    pre := meta_prefix + prefix
+
 		c := b.Cursor()
+		for k, v := c.Seek( meta_prefix ); k != "" && strings.HasPrefix( k, pre ); k, v = c.Next() {
+      t := Object{}
+      if _, err := t.getBytes( v ); err != nil {
+        return err
+      }
 
-		for k, v := c.First(); k != ""; k, v = c.Next() {
-			if strings.Contains( k, prefix ) && strings.HasSuffix( k, meta_suffix ){
-        t := Object{}
-        if _, err := t.getBytes( v ); err != nil {
-          return err
-        }
-
-				bucketc.Contents = append( bucketc.Contents, &Content{
-					Key:          t.Name,
-					LastModified: t.LastModified.Format(time.RFC3339),
-					ETag:         t.ETag,
-					Size:         t.Length,
-					StorageClass: "STANDARD",
-				})
-			}
+      bucketc.Contents = append( bucketc.Contents, &Content{
+        Key:          t.Name,
+        LastModified: t.LastModified.Format(time.RFC3339),
+        ETag:         t.ETag,
+        Size:         t.Length,
+        StorageClass: "STANDARD",
+      })
 		}
 
     r.Status( 200 ).

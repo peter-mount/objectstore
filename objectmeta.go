@@ -49,7 +49,7 @@ func (o *Object) put( b *bolt.Bucket ) error {
 		return err
 	}
 
-	return b.Put( o.Name + meta_suffix, metadata )
+	return b.Put( meta_prefix + o.Name, metadata )
 }
 
 func (o *Object) putPart( b *bolt.Bucket, body []byte ) error {
@@ -68,7 +68,7 @@ func (o *Object) putPart( b *bolt.Bucket, body []byte ) error {
 
 // get retrieves an object's metadata
 func (o *Object) get( b *bolt.Bucket, objectName string ) (bool,error) {
-	v := b.Get( objectName + meta_suffix )
+	v := b.Get( meta_prefix + objectName )
 	if v == nil {
 		return false, nil
 	}
@@ -89,7 +89,7 @@ func (o *Object) getPart( b *bolt.Bucket, partNumber int ) []byte {
 
 // delete Deletes an object and it's metadata
 func (o *Object) delete( b *bolt.Bucket ) error {
-	b.Delete( o.Name + meta_suffix )
+	b.Delete( meta_prefix + o.Name )
   for _, p := range o.Parts {
     b.Delete( fmt.Sprintf( "%s\003%d", o.Name, p.PartNumber ) )
   }

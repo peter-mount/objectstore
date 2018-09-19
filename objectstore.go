@@ -44,8 +44,10 @@ type Bucket struct {
 }
 
 const (
-	// object key suffix used for storing the objects associated metadata
-	meta_suffix         = "\001meta"
+	// prefix used for obeject metadata. Prefix is used to improve performance
+	// when listing a bucket with a large objects as we can filter by prefix in
+	// bbolt but not by suffix
+	meta_prefix         = "meta\001"
 	// Part suffix, used for multipart upload parts, prefix is the UploadId
 	part_suffix					= "\001part"
 	// Meta suffix used to represent a multipart uplaod
