@@ -2,6 +2,7 @@ package policy
 
 import (
   "encoding/json"
+  "github.com/peter-mount/objectstore/utils"
   "strings"
   "testing"
 )
@@ -23,13 +24,7 @@ func TestResource_Unmarshal_IsNil( t *testing.T ) {
 // "cloudformation:*"
 // "*"
 func TestResource_Unmarshal_null( t *testing.T ) {
-  for _, src := range []string{
-    "null",
-    "[]",
-    "\"\"",
-    "[\"\"]",
-    "[\"\",\"\"]",
-  } {
+  for _, src := range []string{ "null", "[]" } {
     action := Resource{}
     err := json.Unmarshal( []byte(src), &action )
     if err != nil {
@@ -49,50 +44,64 @@ func TestResource_Unmarshal_null( t *testing.T ) {
 // "*"
 func TestResource_Unmarshal_single( t *testing.T ) {
   for _, expected := range []string{
-    "s3:*",
-    "ec2:StartInstances",
-    "cloudformation:*",
-    "*",
+    "arn:aws:iam::123456789012:root",
+    "arn:aws:iam::123456789012:user/Bob",
+    "arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/Bob",
+    "arn:aws:iam::123456789012:group/Developers",
   } {
     src := "\"" + expected + "\""
 
-    action := Resource{}
-    err := json.Unmarshal( []byte(src), &action )
+    arn, err := utils.ParseARN(expected)
     if err != nil {
-      t.Fatal( err )
-    }
-
-    if len( action ) != 1 {
-      t.Errorf( "Expected 1 action got %d for %s", len( action ), src )
-      } else if action[0] != expected {
-        t.Errorf( "Expected %s for %s got %v", expected, src, action )
+      t.Error( err )
+    } else {
+      r := Resource{}
+      err = json.Unmarshal( []byte(src), &r )
+      if err != nil {
+        t.Fatal( err )
       }
+
+      if len( r ) != 1 {
+        t.Errorf( "Expected 1 action got %d for %s", len( r ), src )
+      } else if !arn.Equal( &r[0] ) {
+        t.Errorf( "Expected %s for %s got %v", expected, src, r )
+      }
+    }
   }
 }
 
 // Test we can unmarshal actions formed of a slice of strings string
 //
-// ["ec2:StartInstances","ec2:StopInstances"]
-// ["s3:Get*","s3:List*"]
 func TestResource_Unmarshal_slice( t *testing.T ) {
   for _, expected := range [][]string{
-    []string{"ec2:StartInstances","ec2:StopInstances"},
-    []string{"s3:Get*","s3:List*"},
+    []string{
+      "arn:aws:iam::123456789012:root",
+      "arn:aws:iam::123456789012:user/Bob",
+    },
+    []string{
+      "arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/Bob",
+      "arn:aws:iam::123456789012:group/Developers",
+    },
   } {
     src := "[\"" + strings.Join( expected, "\",\"" ) + "\"]"
 
-    action := Resource{}
-    err := json.Unmarshal( []byte(src), &action )
+    r := Resource{}
+    err := json.Unmarshal( []byte(src), &r )
     if err != nil {
       t.Fatal( err )
     }
 
-    if len( action ) != len( expected ) {
-      t.Errorf( "Expected %d action got %d for %s", len( expected ), len( action ), src )
+    if len( r ) != len( expected ) {
+      t.Errorf( "Expected %d action got %d for %s", len( expected ), len( r ), src )
     } else {
       for i, e := range expected {
-        if action[i] != e {
-          t.Errorf( "%d: Expected %s got %s", i, e, action[i] )
+        arn, err := utils.ParseARN(e)
+        if err != nil {
+          t.Fatal( err )
+        }
+
+        if !arn.Equal( &r[i] ) {
+          t.Errorf( "%d: Expected %s got %s", i, e, r[i] )
         }
       }
     }
@@ -111,13 +120,22 @@ func TestResource_Marshal( t *testing.T ) {
   test_marshall( t, a, "null" )
 
   // Single element Resource
-  a = &Resource{ "s3:*" }
-  test_marshall( t, a, "\"s3:*\"" )
+  arn0, err := utils.ParseARN( "arn:aws:iam::123456789012:root" )
+  if err != nil {
+    t.Fatal( err )
+  }
+  a = &Resource{ *arn0 }
+  test_marshall( t, a, "\"arn:aws:iam::123456789012:root\"" )
 
   // multiple element Resource
-  a = &Resource{ "s3:*", "*" }
-  test_marshall( t, a, "[\"s3:*\",\"*\"]" )
-
-  a = &Resource{ "s3:*", "*", "cloudformation:*" }
-  test_marshall( t, a, "[\"s3:*\",\"*\",\"cloudformation:*\"]" )
+  arn1, err := utils.ParseARN( "arn:aws:iam::123456789012:user/Bob" )
+  if err != nil {
+    t.Fatal( err )
+  }
+  arn2, err := utils.ParseARN( "arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/Bob" )
+  if err != nil {
+    t.Fatal( err )
+  }
+  a = &Resource{ *arn1, *arn2 }
+  test_marshall( t, a, "[\"arn:aws:iam::123456789012:user/Bob\",\"arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/Bob\"]" )
 }

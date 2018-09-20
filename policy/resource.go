@@ -2,10 +2,11 @@ package policy
 
 import (
   "encoding/json"
+  "github.com/peter-mount/objectstore/utils"
 )
 
 // A Resource
-type Resource []string
+type Resource []utils.ARN
 
 // IsNil returns true if the Resource is empty
 func (a *Resource) IsNil() bool {
@@ -20,22 +21,20 @@ func (a *Resource) UnmarshalJSON( b []byte ) error {
   bl := len(b)
 
   if b[0]=='"' && b[bl-1]=='"' {
-    var s string
+    var s utils.ARN
     err := json.Unmarshal( b, &s )
     if err != nil {
       return err
     }
     *a = append( *a, s )
   } else if b[0]=='[' && b[bl-1]==']' {
-    var s []string
+    var s []utils.ARN
     err := json.Unmarshal( b, &s )
     if err != nil {
       return err
     }
     for _, e := range s {
-      if e != "" {
-        *a = append( *a, e )
-      }
+      *a = append( *a, e )
     }
   }
   return nil
@@ -49,22 +48,13 @@ func (a *Resource) MarshalJSON() ( []byte, error ) {
 
   // single entry as a string
   if len(*a) == 1 {
-    s := (*a)[0]
-    if s == "" {
-      return []byte("null"), nil
-    }
-    return json.Marshal( s )
+    return json.Marshal( &(*a)[0] )
   }
 
   // normal json array
-  var v []string
+  var v []utils.ARN
   for _, e := range *a {
-    if e != "" {
-      v = append( v, e )
-    }
-  }
-  if len( v ) == 0 {
-    return []byte("null"), nil
+    v = append( v, e )
   }
   return json.Marshal( v )
 }

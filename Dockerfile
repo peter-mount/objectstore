@@ -36,7 +36,9 @@ ADD . .
 # the final build.
 FROM source as test
 
-RUN go test -v github.com/peter-mount/objectstore/policy
+RUN go test -v \
+      github.com/peter-mount/objectstore/policy \
+      github.com/peter-mount/objectstore/utils
 
 # ============================================================
 # Compile the source.
