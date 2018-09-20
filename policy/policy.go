@@ -28,8 +28,8 @@ type Statement struct {
   Effect        string      `json:"Effect,omitempty" xml:"Effect,omitempty", yaml:"Effect"`
   // Optional Principal/NotPrincipal
   // FIXME this needs principal_map adding
-  Principal     string      `json:"Principal,omitempty" xml:"Principal,omitempty", yaml:"Principal"`
-  NotPrincipal  string      `json:"NotPrincipal,omitempty" xml:"NotPrincipal,omitempty", yaml:"NotPrincipal"`
+  Principal     Principal   `json:"Principal,omitempty" xml:"Principal,omitempty", yaml:"Principal"`
+  NotPrincipal  Principal   `json:"NotPrincipal,omitempty" xml:"NotPrincipal,omitempty", yaml:"NotPrincipal"`
   // Required Action/NotAction
   // FIXME this needs either string or[]string
   Action        Action      `json:"Action,omitempty" xml:"Action,omitempty", yaml:"Action"`
