@@ -116,6 +116,11 @@ func ParseARN( src string ) (*ARN, error) {
 }
 
 func ( a *ARN) Parse( src string ) error {
+  // empty
+  if src == "" {
+    src = ":::::"
+  }
+
   // Anonymous shorthand
   if src == "*" {
     src = "::::*:"

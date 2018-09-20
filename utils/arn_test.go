@@ -35,7 +35,58 @@ func TestARN_Unmarshal( t *testing.T ) {
 
     s := a.String()
     if src != s {
-      t.Errorf( "%d:Expected %s got %s", i, src, s )
+      t.Errorf( "%d:Expected %s got %v", i, src, s )
+    }
+  }
+}
+
+func TestARN_IsAnonymous( t *testing.T ) {
+  a := &ARN{}
+  a.Parse( "*" )
+  if !a.IsAnonymous() {
+    t.Errorf( "Expected IsAnonymous got %v for %s", a.IsAnonymous(), a )
+  }
+  if a.IsUserId() {
+    t.Errorf( "Expected !IsUserId got %v for %s", a.IsUserId(), a )
+  }
+  if a.IsNil() {
+    t.Errorf( "Expected !IsNil got %v for %s", a.IsNil(), a )
+  }
+}
+
+func TestARN_IsUserId( t *testing.T ) {
+  a := &ARN{}
+  a.Parse( "12345shdfgfhsdfr" )
+  if a.IsAnonymous() {
+    t.Errorf( "Expected !IsAnonymous got %v for %s", a.IsAnonymous(), a )
+  }
+  if !a.IsUserId() {
+    t.Errorf( "Expected IsUserId got %v for %s", a.IsUserId(), a )
+  }
+  if a.IsNil() {
+    t.Errorf( "Expected !IsNil got %v for %s", a.IsNil(), a )
+  }
+}
+
+func TestARN_IsNil( t *testing.T ) {
+  for i := 0; i < 2; i++ {
+    var a *ARN
+
+    // i==0 then null, i==1 then instance with ""
+    // for both IsNil() should return true
+    if i == 1 {
+      a = &ARN{}
+      a.Parse( "" )
+    }
+    
+    if a.IsAnonymous() {
+      t.Errorf( "%d:Expected !IsAnonymous got %v for %s", i, a.IsAnonymous(), a )
+    }
+    if a.IsUserId() {
+      t.Errorf( "%d:Expected !IsUserId got %v for %s", i, a.IsUserId(), a )
+    }
+    if !a.IsNil() {
+      t.Errorf( "%d:Expected IsNil got %v for %s", i, a.IsNil(), a )
     }
   }
 }
