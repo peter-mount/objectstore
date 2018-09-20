@@ -35,6 +35,10 @@ func (a *ARN) String() string {
     return "*"
   }
 
+  if a.IsUserId() {
+    return a.Account
+  }
+
   return fmt.Sprintf( "%s:%s:%s:%s:%s:%s", a.Type, a.Partition, a.Service, a.Region, a.Account, a.Resource)
 }
 
@@ -45,6 +49,16 @@ func (a *ARN) IsAnonymous() bool {
     a.Service == "" &&
     a.Region == "" &&
     a.Account == "*" &&
+    a.Resource == ""
+}
+
+func (a *ARN) IsUserId() bool {
+  return a != nil &&
+    a.Type == "" &&
+    a.Partition == "" &&
+    a.Service == "" &&
+    a.Region == "" &&
+    a.Account != "*" &&
     a.Resource == ""
 }
 

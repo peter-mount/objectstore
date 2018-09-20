@@ -34,9 +34,7 @@ func TestARN_Unmarshal( t *testing.T ) {
     }
 
     s := a.String()
-    if !strings.Contains( ": ") {
-      t.Errorf( "%d:Expected %s got %s", i, "::::" + src + ":", s )
-    } else if src != s {
+    if src != s {
       t.Errorf( "%d:Expected %s got %s", i, src, s )
     }
   }
