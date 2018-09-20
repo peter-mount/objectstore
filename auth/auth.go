@@ -22,18 +22,20 @@ func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
 
   authorization, exists := r.Request().Header["Authorization"]
   if exists {
-    if strings.HasPrefix( authorization[0], "AWS4-HMAC-SHA256 " ) {
+    if strings.HasPrefix( authorization[0], signV4Algorithm ) {
       c, err := s.getAWS4CredentialHeader( authorization[0], r )
       return c, err
     }
 
-    log.Println( "Unsupported Authorization method:", authorization )
+    if s.config.Debug {
+      log.Println( "Unsupported Authorization method:", authorization )
+    }
     return errorCredential( awserror.CredentialsNotSupported() ), nil
   }
 
   // TODO query params
   // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 
-  // Anonymous access
+  // Deny access
   return invalidCredential(), nil
 }

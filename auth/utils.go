@@ -13,10 +13,27 @@ import (
 )
 
 // unsignedPayload - value to be set to X-Amz-Content-Sha256 header when
-const unsignedPayload = "UNSIGNED-PAYLOAD"
+const (
+  unsignedPayload   = "UNSIGNED-PAYLOAD"
+  iso8601DateFormat = "20060102T150405Z"
+	yyyymmdd          = "20060102"
+)
 
 // if object matches reserved string, no need to encode them
 var reservedObjectNames = regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
+
+func getSigningDate( r *rest.Rest ) (time.Time, error) {
+  v, ok := r.Request().Header["X-Amz-Date"]
+  if !ok {
+    v, ok = r.Request().Header["Date"]
+  }
+  if !ok {
+    t, err := time.Parse( iso8601DateFormat, v[0] )
+    return t, err
+  }
+  // FIXME this should fail if not in the same minute
+  return time.Now().UTC(), nil
+}
 
 // getSigningKey hmac seed to calculate final signature.
 func getSigningKey(secret, loc string, t time.Time) []byte {

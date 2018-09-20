@@ -15,8 +15,6 @@ import (
 // Signature and API related constants.
 const (
 	signV4Algorithm   = "AWS4-HMAC-SHA256"
-	iso8601DateFormat = "20060102T150405Z"
-	yyyymmdd          = "20060102"
 )
 
 var ignoredHeaders = map[string]bool{
@@ -114,42 +112,62 @@ func invalidAuth( authorization string ) *Credential {
   return errorCredential( awserror.InvalidArgument( "Invalid Authorization: %s", authorization ) )
 }
 
+// getV4Credential extracts the content of the Authorization header.
+//
+// Returns m, accessKey, location, service, valid:
+//   valid is false for an error, else true
+//   m map of the individual components of the authorization string
+//   accessKey of the user
+//   location usually us-east-1
+//   service "s3" but could be different for other services
+//
+func (s *AuthService) getV4Credential( authorization string ) (map[string]string, string, string, string, bool ) {
+  a := strings.SplitN( authorization, " ", 2 )
+  if len( a ) == 2 {
+
+    // The credential header
+    m := make(map[string]string)
+    for _,e := range strings.Split( a[1], "," ) {
+      v := strings.SplitN( strings.TrimSpace( e ), "=", 2 )
+      if len(v) == 2 {
+        m[strings.ToLower(v[0])] = v[1]
+      }
+    }
+
+    if s.config.Debug {
+      log.Println( "Authorization header:")
+      for k,v := range m {
+        log.Printf( "   %20s %s", k, v )
+      }
+    }
+
+    if v, ok := m["credential"]; ok {
+      // accessKey/date/location/service/"aws4_request"
+      a = strings.Split( v, "/" )
+      if len(a) == 5 {
+          return m, a[0], a[2], a[3], true
+      }
+    }
+  }
+  return nil, "", "", "", false
+}
+
 // Creates an AWS signature version 4 credential
 //https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
 func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Rest ) (*Credential,error) {
 
-  a := strings.SplitN( authorization, " ", 2 )
-  if len( a ) != 2 {
+  // The X-Amz-Date or Date header
+  t, err := getSigningDate( r )
+  if err != nil {
+    return nil, err
+  }
+
+  m, accessKey, location, _, valid := s.getV4Credential( authorization )
+  if !valid {
     return invalidAuth( authorization ), nil
   }
 
-  // The credential header
-  m := make(map[string]string)
-  for _,e := range strings.Split( a[1], "," ) {
-    v := strings.SplitN( strings.TrimSpace( e ), "=", 2 )
-    if len(v) == 2 {
-      m[strings.ToLower(v[0])] = v[1]
-    }
-  }
-  if s.config.Debug {
-    log.Println( "Authorization header:")
-    for k,v := range m {
-      log.Printf( "   %20s %s", k, v )
-    }
-  }
-
-  v, ok := m["credential"]
-  if !ok {
-    return invalidAuth( authorization ), nil
-  }
-  a = strings.Split( v, "/" )
-  if len(a) != 5 {
-    return invalidAuth( authorization ), nil
-  }
-  date := a[1]
-  location := a[2]
-
-  user := s.getUser( a[0] )
+  user := s.getUser( accessKey )
   if user == nil {
     return invalidCredential(), nil
   }
@@ -157,30 +175,23 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
     log.Println( "User:", user )
   }
 
-	// Time of the key
-  //t := time.Now().UTC()
-  t, err := time.ParseInLocation( yyyymmdd, date, s.timeLocation )
-  if err != nil {
-    return nil, err
-  }
+  // Get canonical request.
+  canonicalRequest := getCanonicalRequest( r )
 
-	// Get canonical request.
-	canonicalRequest := getCanonicalRequest( r )
+  // Get string to sign from canonical request.
+  stringToSign := getStringToSignV4(t, location, canonicalRequest)
 
-	// Get string to sign from canonical request.
-	stringToSign := getStringToSignV4(t, location, canonicalRequest)
+  // Get hmac signing key.
+  signingKey := getSigningKey( user.SecretKey, location, t )
 
-	// Get hmac signing key.
-	signingKey := getSigningKey( user.SecretKey, location, t )
+  // Get credential string.
+  //credential := getCredential( user.SecretKey, location, t )
 
-	// Get credential string.
-	//credential := getCredential( user.SecretKey, location, t )
+  // Get all signed headers.
+  //signedHeaders := getSignedHeaders( r )
 
-	// Get all signed headers.
-	//signedHeaders := getSignedHeaders( r )
-
-	// Calculate signature.
-	signature := getSignature( signingKey, stringToSign )
+  // Calculate signature.
+  signature := getSignature( signingKey, stringToSign )
 
   if s.config.Debug {
     log.Println( m["signature"] == signature, signature )
