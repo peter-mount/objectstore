@@ -7,8 +7,12 @@ import (
 )
 
 type config struct {
-  Root    User              `yaml:"rootUser"`
-  Users   map[string]User   `yaml:"users"`
+  // true to allow full anonymous access, false require authentication
+  AllowFullAnonymous  bool              `yaml:"anonymousAccess"`
+  // The root user - this user has full control on this server
+  Root                User              `yaml:"rootUser"`
+  // The individual users (other than root)
+  Users               map[string]User   `yaml:"users"`
 }
 
 func (s *AuthService) loadConfig() error {

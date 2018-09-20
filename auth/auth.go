@@ -9,6 +9,10 @@ import (
 
 func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
 
+  if s.config.AllowFullAnonymous {
+    return anonymousCredential(), nil
+  }
+
   authorization, exists := r.Request().Header["Authorization"]
   if exists {
     if strings.HasPrefix( authorization[0], "AWS4-HMAC-SHA256 " ) {
@@ -24,5 +28,5 @@ func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
   // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 
   // Anonymous access
-  return anonymousCredential(), nil
+  return invalidCredential(), nil
 }

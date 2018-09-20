@@ -2,6 +2,9 @@
 # You don't need to use this if you are running the store unauthenticated
 # but you will need it if you want to lock down the server.
 
+# If uncommented allow full anonymous access.
+#anonymousAccess: true
+
 # The root user - this user can do anything on the server
 rootUser:
   # The API access & secret keys
