@@ -42,6 +42,19 @@ func (a *ARN) String() string {
   return fmt.Sprintf( "%s:%s:%s:%s:%s:%s", a.Type, a.Partition, a.Service, a.Region, a.Account, a.Resource)
 }
 
+// IsNil returns true if this ARN is nil or every field is ""
+func (a *ARN) IsNil() bool {
+  return a == nil || (
+    a.Type == "" &&
+    a.Partition == "" &&
+    a.Service == "" &&
+    a.Region == "" &&
+    a.Account == "" &&
+    a.Resource == "" )
+}
+
+// IsAnonymous returns true if this ARN is for the Anonymous user.
+// i.e. it's value is "*" but in this struct it's got Account == "*" but all other fields set to ""
 func (a *ARN) IsAnonymous() bool {
   return a != nil &&
     a.Type == "" &&
@@ -52,12 +65,16 @@ func (a *ARN) IsAnonymous() bool {
     a.Resource == ""
 }
 
+// IsUserId returns true if this ARN is for a specific Account.
+// Like IsAnonymous() where Account is "*", this is true if all other fields are ""
+// but Account is not "" and not "*" (which is Anonymous)
 func (a *ARN) IsUserId() bool {
   return a != nil &&
     a.Type == "" &&
     a.Partition == "" &&
     a.Service == "" &&
     a.Region == "" &&
+    a.Account != "" &&
     a.Account != "*" &&
     a.Resource == ""
 }
