@@ -9,11 +9,11 @@ import (
 
 func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
 
-  if s.config.AllowFullAnonymous {
+  if s.config.Auth.AllowFullAnonymous {
     return anonymousCredential(), nil
   }
 
-  if s.config.Debug {
+  if s.config.Auth.Debug {
     log.Println( "Request Headers:")
     for k,v := range r.Request().Header {
       log.Printf( "   %20s %s", k, v )
@@ -22,14 +22,20 @@ func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
 
   authorization, exists := r.Request().Header["Authorization"]
   if exists {
-    if strings.HasPrefix( authorization[0], signV4Algorithm ) {
+    if strings.HasPrefix( authorization[0], signV4Algorithm ) && !s.config.Auth.DisableV4 {
       c, err := s.getAWS4CredentialHeader( authorization[0], r )
       return c, err
     }
 
-    if s.config.Debug {
+    if strings.HasPrefix( authorization[0], signV2Algorithm ) && !s.config.Auth.DisableV2 {
+      c, err := s.getAWS2CredentialHeader( authorization[0], r )
+      return c, err
+    }
+
+    if s.config.Auth.Debug {
       log.Println( "Unsupported Authorization method:", authorization )
     }
+
     return errorCredential( awserror.CredentialsNotSupported() ), nil
   }
 

@@ -2,11 +2,16 @@
 # You don't need to use this if you are running the store unauthenticated
 # but you will need it if you want to lock down the server.
 
-# If uncommented allow full anonymous access.
-#anonymousAccess: true
-
-# Enable debugging
-debug: true
+# Authentication
+auth:
+  # If uncommented allow full anonymous access.
+  #anonymousAccess: true
+  # Uncomment to disable the old V2 signatures
+  #disableV2: true
+  # Uncomment to disable the new V4 signatures
+  #disableV4: true
+  # Enable debugging of auth
+  #debug: true
 
 # The root user - this user can do anything on the server
 rootUser:

@@ -7,10 +7,18 @@ import (
 )
 
 type config struct {
-  // true to allow full anonymous access, false require authentication
-  AllowFullAnonymous  bool              `yaml:"anonymousAccess"`
+  Auth struct {
+    // true to allow full anonymous access, false require authentication
+    AllowFullAnonymous  bool              `yaml:"anonymousAccess"`
+    // true to disable V2 signatures
+    DisableV2           bool              `yaml:"disableV2"`
+    // true to disable V4 signatures
+    DisableV4           bool              `yaml:"disableV4"`
+    // Enable debugging of authentication
+    Debug               bool              `yaml:"debug"`
+  }
   // Enable debugging
-  Debug               bool              `yaml:"debug"`
+  //Debug               bool              `yaml:"debug"`
   // The root user - this user has full control on this server
   Root                User              `yaml:"rootUser"`
   // The individual users (other than root)

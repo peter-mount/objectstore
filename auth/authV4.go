@@ -134,7 +134,7 @@ func (s *AuthService) getV4Credential( authorization string ) (map[string]string
       }
     }
 
-    if s.config.Debug {
+    if s.config.Auth.Debug {
       log.Println( "Authorization header:")
       for k,v := range m {
         log.Printf( "   %20s %s", k, v )
@@ -171,7 +171,7 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
   if user == nil {
     return invalidCredential(), nil
   }
-  if s.config.Debug {
+  if s.config.Auth.Debug {
     log.Println( "User:", user )
   }
 
@@ -193,7 +193,7 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
   // Calculate signature.
   signature := getSignature( signingKey, stringToSign )
 
-  if s.config.Debug {
+  if s.config.Auth.Debug {
     log.Println( m["signature"] == signature, signature )
   }
 
