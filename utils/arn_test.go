@@ -22,6 +22,10 @@ func TestARN_Unmarshal( t *testing.T ) {
     "arn:aws:iam::123456789012:server-certificate/division_abc/subdivision_xyz/ProdServerCert",
     "arn:aws:iam::123456789012:saml-provider/ADFSProvider",
     "arn:aws:iam::123456789012:oidc-provider/GoogleProvider",
+    // Anonymous
+    "*",
+    // User Id only
+    "123456789012",
   } {
     a := &ARN{}
     err := json.Unmarshal( []byte("\"" + src + "\""), a )
@@ -30,7 +34,9 @@ func TestARN_Unmarshal( t *testing.T ) {
     }
 
     s := a.String()
-    if src != s {
+    if !strings.Contains( ": ") {
+      t.Errorf( "%d:Expected %s got %s", i, "::::" + src + ":", s )
+    } else if src != s {
       t.Errorf( "%d:Expected %s got %s", i, src, s )
     }
   }

@@ -27,7 +27,25 @@ func NewARN( t, partition, service, region, account, resource string ) *ARN {
 }
 
 func (a *ARN) String() string {
+  if a == nil {
+    return ""
+  }
+
+  if a.IsAnonymous() {
+    return "*"
+  }
+
   return fmt.Sprintf( "%s:%s:%s:%s:%s:%s", a.Type, a.Partition, a.Service, a.Region, a.Account, a.Resource)
+}
+
+func (a *ARN) IsAnonymous() bool {
+  return a != nil &&
+    a.Type == "" &&
+    a.Partition == "" &&
+    a.Service == "" &&
+    a.Region == "" &&
+    a.Account == "*" &&
+    a.Resource == ""
 }
 
 func (a *ARN) Equal( b *ARN ) bool {
@@ -67,6 +85,16 @@ func ParseARN( src string ) (*ARN, error) {
 }
 
 func ( a *ARN) Parse( src string ) error {
+  // Anonymous shorthand
+  if src == "*" {
+    src = "::::*:"
+  }
+
+  // Just the userId
+  if !strings.Contains( src, ":" ) {
+    src = "::::" + src + ":"
+  }
+
   s := strings.SplitN( src, ":", 6 )
   if len(s) != 6 {
     return fmt.Errorf( "Invalid ARN %s", src )
