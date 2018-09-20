@@ -131,6 +131,12 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
       m[strings.ToLower(v[0])] = v[1]
     }
   }
+  if s.config.Debug {
+    log.Println( "Authorization header:")
+    for k,v := range m {
+      log.Printf( "   %20s %s", k, v )
+    }
+  }
 
   v, ok := m["credential"]
   if !ok {
@@ -147,7 +153,9 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
   if user == nil {
     return invalidCredential(), nil
   }
-  log.Println( user )
+  if s.config.Debug {
+    log.Println( "User:", user )
+  }
 
 	// Time of the key
   //t := time.Now().UTC()
@@ -174,8 +182,10 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
 	// Calculate signature.
 	signature := getSignature( signingKey, stringToSign )
 
-  log.Println( m )
-  log.Println( signature )
+  if s.config.Debug {
+    log.Println( m["signature"] == signature, signature )
+  }
+
   if signature != m["signature"] {
     return errorCredential( awserror.AccessDenied() ), nil
   }

@@ -9,6 +9,8 @@ import (
 type config struct {
   // true to allow full anonymous access, false require authentication
   AllowFullAnonymous  bool              `yaml:"anonymousAccess"`
+  // Enable debugging
+  Debug               bool              `yaml:"debug"`
   // The root user - this user has full control on this server
   Root                User              `yaml:"rootUser"`
   // The individual users (other than root)

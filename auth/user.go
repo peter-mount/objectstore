@@ -23,3 +23,10 @@ func (s *AuthService) getUser( accessKey string ) *User {
 func (s *User) IsRoot() bool {
   return s != nil && s.root
 }
+
+func (s *User) String() string {
+  if s == nil {
+    return "nil"
+  }
+  return s.AccessKey
+}

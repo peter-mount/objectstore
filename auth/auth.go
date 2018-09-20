@@ -13,6 +13,13 @@ func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
     return anonymousCredential(), nil
   }
 
+  if s.config.Debug {
+    log.Println( "Request Headers:")
+    for k,v := range r.Request().Header {
+      log.Printf( "   %20s %s", k, v )
+    }
+  }
+
   authorization, exists := r.Request().Header["Authorization"]
   if exists {
     if strings.HasPrefix( authorization[0], "AWS4-HMAC-SHA256 " ) {

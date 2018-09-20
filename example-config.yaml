@@ -5,6 +5,9 @@
 # If uncommented allow full anonymous access.
 #anonymousAccess: true
 
+# Enable debugging
+debug: true
+
 # The root user - this user can do anything on the server
 rootUser:
   # The API access & secret keys
