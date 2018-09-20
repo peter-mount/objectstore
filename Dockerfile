@@ -32,6 +32,13 @@ WORKDIR /go/src/github.com/peter-mount/objectstore
 ADD . .
 
 # ============================================================
+# Run all tests in a new container so any output won't affect
+# the final build.
+FROM source as test
+
+RUN go test -v github.com/peter-mount/objectstore/policy
+
+# ============================================================
 # Compile the source.
 FROM source as compiler
 ARG arch
