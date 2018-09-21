@@ -73,7 +73,7 @@ func TestPolicyUnmarshal_2( t *testing.T ) {
 }
 
 func TestPolicyUnmarshal_3( t *testing.T ) {
-  const src = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Test\",\"Effect\": \"Deny\",\"Principal\": {\"AWS\": \"arn:aws:iam::123456789012:root\"},\"Action\": \"s3:*\",\"Resource\": \"arn:aws:s3:::examplebucket/*\",\"Condition\": {\"StringEquals\": {\"s3:signatureversion\": \"AWS4-HMAC-SHA256\"}}}]}"
+  const src = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Test\",\"Effect\": \"Deny\",\"Principal\": {\"AWS\": \"arn:aws:iam::123456789012:root\"},\"Action\": \"s3:*\",\"Resource\": \"arn:aws:s3:::examplebucket/*\",\"Condition\": {\"StringEquals\": {\"s3:signatureversion\": [\"AWS4-HMAC-SHA256\",\"ANOTHER\"]}}}]}"
 
   policy := &Policy{}
 

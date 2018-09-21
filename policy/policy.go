@@ -1,5 +1,9 @@
 package policy
 
+import (
+  "github.com/peter-mount/objectstore/condition"
+)
+
 const (
   // Current policy version
   // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_version.html
@@ -23,20 +27,20 @@ type Policy struct {
 
 type Statement struct {
   // Optional SID
-  Sid           string      `json:"Sid,omitempty" xml:"Sid,omitempty", yaml:"Sid"`
+  Sid           string                `json:"Sid,omitempty" xml:"Sid,omitempty", yaml:"Sid"`
   // Effect required
-  Effect        string      `json:"Effect,omitempty" xml:"Effect,omitempty", yaml:"Effect"`
+  Effect        string                `json:"Effect,omitempty" xml:"Effect,omitempty", yaml:"Effect"`
   // Optional Principal/NotPrincipal
   // FIXME this needs principal_map adding
-  Principal     Principal   `json:"Principal,omitempty" xml:"Principal,omitempty", yaml:"Principal"`
-  NotPrincipal  Principal   `json:"NotPrincipal,omitempty" xml:"NotPrincipal,omitempty", yaml:"NotPrincipal"`
+  Principal     Principal             `json:"Principal,omitempty" xml:"Principal,omitempty", yaml:"Principal"`
+  NotPrincipal  Principal             `json:"NotPrincipal,omitempty" xml:"NotPrincipal,omitempty", yaml:"NotPrincipal"`
   // Required Action/NotAction
   // FIXME this needs either string or[]string
-  Action        Action      `json:"Action,omitempty" xml:"Action,omitempty", yaml:"Action"`
-  NotAction     Action      `json:"NotAction,omitempty" xml:"NotAction,omitempty", yaml:"NotAction"`
+  Action        Action                `json:"Action,omitempty" xml:"Action,omitempty", yaml:"Action"`
+  NotAction     Action                `json:"NotAction,omitempty" xml:"NotAction,omitempty", yaml:"NotAction"`
   // Required resource block
-  Resource      Resource    `json:"Resource,omitempty" xml:"Resource,omitempty", yaml:"Resource"`
-  NotResource   Resource    `json:"NotResource,omitempty" xml:"NotResource,omitempty", yaml:"NotResource"`
+  Resource      Resource              `json:"Resource,omitempty" xml:"Resource,omitempty", yaml:"Resource"`
+  NotResource   Resource              `json:"NotResource,omitempty" xml:"NotResource,omitempty", yaml:"NotResource"`
   // Condition optional
-  Condition     map[string]map[string]interface{}
+  Condition     condition.Condition   `json:"Condition,omitempty" xml:"Condition,omitempty", yaml:"Condition"`
 }
