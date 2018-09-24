@@ -1,6 +1,7 @@
 package event
 
 import (
+  "fmt"
   "github.com/peter-mount/objectstore/utils"
   "time"
 )
@@ -54,4 +55,26 @@ type S3Object struct {
   ETag            string            `json:"eTag"`
   VersionId      *string            `json:"versionId"`
   Sequencer       string            `json:"sequencer"`
+}
+
+func (evt *Event) RoutingKey() string {
+  if evt.S3 != nil {
+    // S3 routing key
+    // source should be "aws:s3" and region the bucket region. No user id then
+    // the bucket/key as the resource
+    return fmt.Sprintf(
+      "arn:%s:%s::%s/%s",
+      evt.Source,
+      evt.Region,
+      evt.S3.Bucket.Name,
+      evt.S3.Object.Key,
+    )
+  }
+
+  // Basic routing key of source service & region -fail safe option
+  return fmt.Sprintf(
+    "arn:%s:%s:::",
+    evt.Source,
+    evt.Region,
+  )
 }
