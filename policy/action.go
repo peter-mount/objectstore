@@ -16,11 +16,30 @@ import (
 //
 // During unmarshalling we do the same and strip out any "" entries.
 //
-type Action []string
+type Action struct {
+  actions []string
+  negate    bool
+}
+
+func NewAction( s ...string ) *Action {
+  return &Action{ actions: s }
+}
+
+func NewNotAction( s ...string ) *Action {
+  return &Action{ actions: s, negate: true }
+}
 
 // IsNil returns true if the action is empty
 func (a *Action) IsNil() bool {
-  return a == nil || len( *a ) == 0
+  return a == nil || len( a.actions ) == 0
+}
+
+func (a *Action) Len() int {
+  return len(a.actions)
+}
+
+func (a *Action) Get(i int) string {
+  return a.actions[i]
 }
 
 func (a *Action) UnmarshalJSON( b []byte ) error {
@@ -36,7 +55,7 @@ func (a *Action) UnmarshalJSON( b []byte ) error {
     if err != nil {
       return err
     }
-    *a = append( *a, s )
+    a.actions = append( a.actions, s )
   } else if b[0]=='[' && b[bl-1]==']' {
     var s []string
     err := json.Unmarshal( b, &s )
@@ -45,7 +64,7 @@ func (a *Action) UnmarshalJSON( b []byte ) error {
     }
     for _, e := range s {
       if e != "" {
-        *a = append( *a, e )
+        a.actions = append( a.actions, e )
       }
     }
   }
@@ -54,13 +73,13 @@ func (a *Action) UnmarshalJSON( b []byte ) error {
 
 func (a *Action) MarshalJSON() ( []byte, error ) {
   // nil or empty then marshal null
-  if a == nil || len(*a) == 0 {
+  if a == nil || len(a.actions) == 0 {
     return []byte("null"), nil
   }
 
   // single entry as a string
-  if len(*a) == 1 {
-    s := (*a)[0]
+  if len(a.actions) == 1 {
+    s := (a.actions)[0]
     if s == "" {
       return []byte("null"), nil
     }
@@ -69,7 +88,7 @@ func (a *Action) MarshalJSON() ( []byte, error ) {
 
   // normal json array
   var v []string
-  for _, e := range *a {
+  for _, e := range a.actions {
     if e != "" {
       v = append( v, e )
     }

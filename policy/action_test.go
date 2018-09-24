@@ -51,7 +51,7 @@ func TestAction_Unmarshal_null( t *testing.T ) {
       t.Fatal( err )
     }
     if !action.IsNil() {
-      t.Errorf( "Expected true from %s got %v on %s", src, action.IsNil(), action )
+      t.Errorf( "Expected true from %s got %v on %v", src, action.IsNil(), action )
     }
   }
 }
@@ -77,9 +77,9 @@ func TestAction_Unmarshal_single( t *testing.T ) {
       t.Fatal( err )
     }
 
-    if len( action ) != 1 {
-      t.Errorf( "Expected 1 action got %d for %s", len( action ), src )
-      } else if action[0] != expected {
+    if len( action.actions ) != 1 {
+      t.Errorf( "Expected 1 action got %d for %s", len( action.actions ), src )
+      } else if action.actions[0] != expected {
         t.Errorf( "Expected %s for %s got %v", expected, src, action )
       }
   }
@@ -102,12 +102,12 @@ func TestAction_Unmarshal_slice( t *testing.T ) {
       t.Fatal( err )
     }
 
-    if len( action ) != len( expected ) {
-      t.Errorf( "Expected %d action got %d for %s", len( expected ), len( action ), src )
+    if len( action.actions ) != len( expected ) {
+      t.Errorf( "Expected %d action got %d for %s", len( expected ), len( action.actions ), src )
     } else {
       for i, e := range expected {
-        if action[i] != e {
-          t.Errorf( "%d: Expected %s got %s", i, e, action[i] )
+        if action.actions[i] != e {
+          t.Errorf( "%d: Expected %s got %s", i, e, action.actions[i] )
         }
       }
     }
@@ -125,14 +125,18 @@ func TestAction_Marshal( t *testing.T ) {
   a = &Action{}
   test_marshall( t, a, "null" )
 
+  // empty Action
+  a = NewAction()
+  test_marshall( t, a, "null" )
+
   // Single element Action
-  a = &Action{ "s3:*" }
+  a = NewAction( "s3:*" )
   test_marshall( t, a, "\"s3:*\"" )
 
   // multiple element Action
-  a = &Action{ "s3:*", "*" }
+  a = NewAction( "s3:*", "*" )
   test_marshall( t, a, "[\"s3:*\",\"*\"]" )
 
-  a = &Action{ "s3:*", "*", "cloudformation:*" }
+  a = NewAction( "s3:*", "*", "cloudformation:*" )
   test_marshall( t, a, "[\"s3:*\",\"*\",\"cloudformation:*\"]" )
 }

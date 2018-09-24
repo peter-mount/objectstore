@@ -23,9 +23,9 @@ func TestPolicyUnmarshal_1( t *testing.T ) {
   } else {
     for i, stmt := range policy.Statement {
 
-      if len( stmt.Action ) != 1 {
-        t.Errorf( "%d: Expected 1 action got %d", i, len( stmt.Action ) )
-      } else  if len( stmt.Action ) == 1 && stmt.Action[0] != "s3:*" {
+      if stmt.Action.Len() != 1 {
+        t.Errorf( "%d: Expected 1 action got %d", i, stmt.Action.Len() )
+      } else  if stmt.Action.Len() == 1 && stmt.Action.Get(0) != "s3:*" {
         t.Errorf( "%d: Expected s3:* action got %v", i, stmt.Action )
       }
 
@@ -56,9 +56,9 @@ func TestPolicyUnmarshal_2( t *testing.T ) {
   } else {
     for i, stmt := range policy.Statement {
 
-      if len( stmt.Action ) != 1 {
-        t.Errorf( "%d: Expected 1 action got %d", i, len( stmt.Action ) )
-      } else  if len( stmt.Action ) == 1 && stmt.Action[0] != "s3:*" {
+      if stmt.Action.Len() != 1 {
+        t.Errorf( "%d: Expected 1 action got %d", i, stmt.Action.Len() )
+      } else  if stmt.Action.Len() == 1 && stmt.Action.Get(0) != "s3:*" {
         t.Errorf( "%d: Expected s3:* action got %v", i, stmt.Action )
       }
 
@@ -89,9 +89,9 @@ func TestPolicyUnmarshal_3( t *testing.T ) {
   } else {
     for i, stmt := range policy.Statement {
 
-      if len( stmt.Action ) != 1 {
-        t.Errorf( "%d: Expected 1 action got %d", i, len( stmt.Action ) )
-      } else  if len( stmt.Action ) == 1 && stmt.Action[0] != "s3:*" {
+      if stmt.Action.Len() != 1 {
+        t.Errorf( "%d: Expected 1 action got %d", i, stmt.Action.Len() )
+      } else  if stmt.Action.Len() == 1 && stmt.Action.Get(0) != "s3:*" {
         t.Errorf( "%d: Expected s3:* action got %v", i, stmt.Action )
       }
 
@@ -122,9 +122,9 @@ func TestPolicyUnmarshal_4( t *testing.T ) {
   } else {
     for i, stmt := range policy.Statement {
 
-      if len( stmt.Action ) != 1 {
-        t.Errorf( "%d: Expected 1 action got %d", i, len( stmt.Action ) )
-      } else  if len( stmt.Action ) == 1 && stmt.Action[0] != "s3:*" {
+      if stmt.Action.Len() != 1 {
+        t.Errorf( "%d: Expected 1 action got %d", i, stmt.Action.Len() )
+      } else  if stmt.Action.Len() == 1 && stmt.Action.Get(0) != "s3:*" {
         t.Errorf( "%d: Expected s3:* action got %v", i, stmt.Action )
       }
 
