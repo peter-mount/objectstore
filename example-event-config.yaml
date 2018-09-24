@@ -1,0 +1,37 @@
+# Example event notification configuration
+
+# Publish events to RabbitMQ
+RabbitConfig:
+  -
+    # Unique id
+    Id: Rabbit1
+    # Amqp url to connect to rabbitmq
+    Amqp: amqp://guest:guest@rabbit
+    # Exchange to use
+    Exchange: aws.event
+    # Publish any ObjectCreated events
+    Event: ObjectCreated:*
+    # Example filter on a specific prefix, so all objects beginning with README
+    Filter:
+      S3Key:
+        FilterRule:
+          -
+            # prefix match, here all starting with README
+            Name: prefix
+            Value: README
+          #-
+          #  # example suffix match
+          #  Name: suffix
+          #  Value: .png
+  -
+    Id: Rabbit2
+    Amqp: amqp://guest:guest@rabbit
+    Exchange: aws.event
+    # Publish any ObjectCreated events, no filtering
+    Event: ObjectCreated:*
+  -
+    Id: Rabbit3
+    Amqp: amqp://guest:guest@rabbit
+    Exchange: aws.event
+    # Publish any event
+    Event: "*"

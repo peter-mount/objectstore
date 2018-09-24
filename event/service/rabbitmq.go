@@ -68,17 +68,21 @@ func (a *EventService) publishRabbit( evt *event.Event ) error {
   var err error
 
   found := false
-  for _, c := range a.mqInstances {
+  for _, mq := range a.mqInstances {
+    for _, cfg := range mq.config {
+      if event.TestEventName( cfg.Event, evt.Name ) && cfg.Filter.Test( evt ) {
+        // Lazy marshal only if we hit
+        if !found {
+          found = true
+          b, err = json.Marshal( &event.Records{ []*event.Event{ evt } } )
+          if err != nil {
+            return err
+          }
+        }
 
-    if !found {
-      found = true
-      b, err = json.Marshal( &event.Records{ []*event.Event{ evt } } )
-      if err != nil {
-        return err
+        mq.mq.Publish( evt.RoutingKey(), b )
       }
     }
-
-    c.mq.Publish( evt.RoutingKey(), b )
   }
 
   return nil

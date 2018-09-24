@@ -14,19 +14,6 @@ type NotificationConfiguration struct {
   RabbitConfig []*RabbitConfiguration      `json:"RabbitConfig" xml:"RabbitConfig" yaml:"RabbitConfig"`
 }
 
-// Filter config
-type Filter struct {
-  S3Key         S3Key       `json:"S3Key" xml:"S3Key" yaml:"S3Key"`
-  FilterRule  []FilterRule  `json:"FilterRule" xml:"FilterRule" yaml:"FilterRule"`
-}
-type S3Key struct {
-  FilterRule  []FilterRule  `json:"FilterRule" xml:"FilterRule" yaml:"FilterRule"`
-}
-type FilterRule struct {
-  Name          string      `json:"Name" xml:"Name" yaml:"Name"`
-  Value         string      `json:"Value" xml:"Value" yaml:"Value"`
-}
-
 func (a *EventService) loadConfig() error {
   a.mqInstances = make( map[string]*RabbitMQ )
 
