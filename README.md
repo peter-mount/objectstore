@@ -16,6 +16,7 @@ Full details is in the These are in the [wiki](https://github.com/peter-mount/ob
 * Retrieve object
 * Delete object
 * Docker container
+* Event notification, currently supports RabbitMQ
 
 ## Supported clients
 
@@ -24,7 +25,6 @@ These are now listed in the [wiki](https://github.com/peter-mount/objectstore/wi
 ## ToDo
 * Add authentication
 * Add ACL control
-* Add Event notification using RabbitMQ (similar to how [Minio](https://github.com/minio/minio) does)
 
 ## Similar notable projects
 - https://github.com/johannesboyne/gofakes3 also written in Go & where I started this from
