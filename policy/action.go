@@ -34,12 +34,39 @@ func (a *Action) IsNil() bool {
   return a == nil || len( a.actions ) == 0
 }
 
+// Len returns the number of actions
 func (a *Action) Len() int {
+  if a==nil {
+    return 0
+  }
   return len(a.actions)
 }
 
+// Get returns the n'th action
 func (a *Action) Get(i int) string {
+  if a==nil || i<0 || i>= len(a.actions) {
+    return ""
+  }
   return a.actions[i]
+}
+
+// ForEach invoke a function for each action
+func (a *Action) ForEach( f func(int,string) error ) error {
+  if a != nil {
+    for i,e := range a.actions {
+      err := f(i,e)
+      if err != nil {
+        return err
+      }
+    }
+  }
+
+  return nil
+}
+
+// IsNegate returns true if this is a NotAction rather than Action block
+func (a *Action) IsNegate() bool {
+  return a!=nil && a.negate
 }
 
 func (a *Action) UnmarshalJSON( b []byte ) error {
