@@ -8,13 +8,35 @@ import (
 )
 
 // A Principal
-type Principal map[string]PrincipalMap
+type Principal struct {
+  principal map[string]PrincipalMap
+  negate    bool
+}
 
 // A Principal Map
 type PrincipalMap []utils.ARN
 
+// ForEach invoke a function for each action
+func (a *Principal) ForEach( f func(string,PrincipalMap) error ) error {
+  if a != nil {
+    for k,v := range a.principal {
+      err := f(k,v)
+      if err != nil {
+        return err
+      }
+    }
+  }
+
+  return nil
+}
+
+// IsNegate returns true if this is a NotAction rather than Action block
+func (a *Principal) IsNegate() bool {
+  return a!=nil && a.negate
+}
+
 func (a *Principal) UnmarshalJSON( b []byte ) error {
-  *a = make( Principal )
+  a.principal = make( map[string]PrincipalMap )
 
   // Anonymous "*" -> {"AWS":"*"}
   if bytes.Equal( b, []byte("\"*\"") ) {
@@ -34,7 +56,7 @@ func (a *Principal) UnmarshalJSON( b []byte ) error {
     if err != nil {
       return err
     }
-    (*a)[k] = *pm
+    a.principal[k] = *pm
   }
 
   return nil
@@ -66,18 +88,19 @@ func (a *Principal) MarshalJSON() ( []byte, error ) {
   }
 
   // Special case, single Anonymous entry
-  if aws, ok := (*a)["AWS"]; ok && len( aws ) == 1 && aws[0].IsAnonymous() {
+  if aws, ok := a.principal["AWS"]; ok && len( aws ) == 1 && aws[0].IsAnonymous() {
     return []byte( "\"*\""), nil
   }
 
   buffer := bytes.NewBufferString("{")
 
   sep := false
-  for k, v := range *a {
+  for k, v := range a.principal {
     if sep {
       buffer.WriteString( "," )
+    } else {
+      sep = true
     }
-    sep = true
 
     b, err := json.Marshal( k )
     if err != nil {

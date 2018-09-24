@@ -25,13 +25,13 @@ func TestResource_Unmarshal_IsNil( t *testing.T ) {
 // "*"
 func TestResource_Unmarshal_null( t *testing.T ) {
   for _, src := range []string{ "null", "[]" } {
-    action := Resource{}
-    err := json.Unmarshal( []byte(src), &action )
+    resource := Resource{}
+    err := json.Unmarshal( []byte(src), &resource )
     if err != nil {
       t.Fatal( err )
     }
-    if !action.IsNil() {
-      t.Errorf( "Expected true from %s got %v on %s", src, action.IsNil(), action )
+    if !resource.IsNil() {
+      t.Errorf( "Expected true from %s got %v on %v", src, resource.IsNil(), resource )
     }
   }
 }
@@ -61,9 +61,9 @@ func TestResource_Unmarshal_single( t *testing.T ) {
         t.Fatal( err )
       }
 
-      if len( r ) != 1 {
-        t.Errorf( "Expected 1 action got %d for %s", len( r ), src )
-      } else if !arn.Equal( &r[0] ) {
+      if r.Len() != 1 {
+        t.Errorf( "Expected 1 action got %d for %s", r.Len(), src )
+      } else if !arn.Equal( r.Get(0) ) {
         t.Errorf( "Expected %s for %s got %v", expected, src, r )
       }
     }
@@ -91,8 +91,8 @@ func TestResource_Unmarshal_slice( t *testing.T ) {
       t.Fatal( err )
     }
 
-    if len( r ) != len( expected ) {
-      t.Errorf( "Expected %d action got %d for %s", len( expected ), len( r ), src )
+    if r.Len() != len( expected ) {
+      t.Errorf( "Expected %d action got %d for %s", len( expected ), r.Len(), src )
     } else {
       for i, e := range expected {
         arn, err := utils.ParseARN(e)
@@ -100,8 +100,8 @@ func TestResource_Unmarshal_slice( t *testing.T ) {
           t.Fatal( err )
         }
 
-        if !arn.Equal( &r[i] ) {
-          t.Errorf( "%d: Expected %s got %s", i, e, r[i] )
+        if !arn.Equal( r.Get(i) ) {
+          t.Errorf( "%d: Expected %s got %s", i, e, r.Get(i) )
         }
       }
     }
@@ -116,7 +116,7 @@ func TestResource_Marshal( t *testing.T ) {
   test_marshall( t, a, "null" )
 
   // empty Resource
-  a = &Resource{}
+  a = NewResource()
   test_marshall( t, a, "null" )
 
   // Single element Resource
@@ -124,7 +124,7 @@ func TestResource_Marshal( t *testing.T ) {
   if err != nil {
     t.Fatal( err )
   }
-  a = &Resource{ *arn0 }
+  a = NewResource(*arn0)
   test_marshall( t, a, "\"arn:aws:iam::123456789012:root\"" )
 
   // multiple element Resource
@@ -136,6 +136,22 @@ func TestResource_Marshal( t *testing.T ) {
   if err != nil {
     t.Fatal( err )
   }
-  a = &Resource{ *arn1, *arn2 }
+  a = NewResource( *arn1, *arn2 )
   test_marshall( t, a, "[\"arn:aws:iam::123456789012:user/Bob\",\"arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/Bob\"]" )
+}
+
+func TestResource_Unmarshal_Resource( t *testing.T ) {
+
+  const src = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Test\",\"Effect\": \"Deny\",\"Principal\": {\"AWS\": [\"arn:aws:iam::123456789012:root\",\"arn:aws:iam::123456789012:user/Bob\"]},\"Action\": \"s3:*\",\"Resource\": \"arn:aws:s3:::examplebucket/*\",\"Condition\": {\"StringEquals\": {\"s3:signatureversion\": \"AWS4-HMAC-SHA256\"}}}]}"
+  policy := &Policy{}
+
+  testPolicy_Unmarshal( t, policy, src, "\"Resource\"" )
+}
+
+func TestResource_Unmarshal_NotResource( t *testing.T ) {
+
+  const src = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Test\",\"Effect\": \"Deny\",\"Principal\": {\"AWS\": [\"arn:aws:iam::123456789012:root\",\"arn:aws:iam::123456789012:user/Bob\"]},\"Action\": \"s3:*\",\"NotResource\": \"arn:aws:s3:::examplebucket/*\",\"Condition\": {\"StringEquals\": {\"s3:signatureversion\": \"AWS4-HMAC-SHA256\"}}}]}"
+  policy := &Policy{}
+
+  testPolicy_Unmarshal( t, policy, src, "\"NotResource\"" )
 }

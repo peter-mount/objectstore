@@ -26,6 +26,14 @@ func NewARN( t, partition, service, region, account, resource string ) *ARN {
   return &ARN{t, partition, service, region, account, resource}
 }
 
+func NilARN() *ARN {
+  return &ARN{"","","","","",""}
+}
+
+func AnonymousARN() *ARN {
+  return &ARN{"","","","","*",""}
+}
+
 func (a *ARN) String() string {
   if a == nil {
     return ""

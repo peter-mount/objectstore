@@ -6,11 +6,55 @@ import (
 )
 
 // A Resource
-type Resource []utils.ARN
+type Resource struct {
+  resources []utils.ARN
+  negate      bool
+}
+
+func NewResource( resources ...utils.ARN ) *Resource {
+  r := &Resource{}
+  r.resources = resources
+  return r
+}
 
 // IsNil returns true if the Resource is empty
 func (a *Resource) IsNil() bool {
-  return a == nil || len( *a ) == 0
+  return a == nil || len( a.resources ) == 0
+}
+
+// Len returns the number of actions
+func (a *Resource) Len() int {
+  if a==nil {
+    return 0
+  }
+  return len(a.resources)
+}
+
+// Get returns the n'th action
+func (a *Resource) Get(i int) *utils.ARN {
+  if a==nil || i<0 || i>= len(a.resources) {
+    return utils.NilARN()
+  }
+  return &(a.resources[i])
+}
+
+// ForEach invoke a function for each action
+func (a *Resource) ForEach( f func(int,utils.ARN) error ) error {
+  if a != nil {
+    for i,e := range a.resources {
+      err := f(i,e)
+      if err != nil {
+        return err
+      }
+    }
+  }
+
+  return nil
+}
+
+// IsNegate returns true if this is a NotAction rather than Action block
+func (a *Resource) IsNegate() bool {
+  return a!=nil && a.negate
 }
 
 func (a *Resource) UnmarshalJSON( b []byte ) error {
@@ -26,7 +70,7 @@ func (a *Resource) UnmarshalJSON( b []byte ) error {
     if err != nil {
       return err
     }
-    *a = append( *a, s )
+    a.resources = append( a.resources, s )
   } else if b[0]=='[' && b[bl-1]==']' {
     var s []utils.ARN
     err := json.Unmarshal( b, &s )
@@ -34,7 +78,7 @@ func (a *Resource) UnmarshalJSON( b []byte ) error {
       return err
     }
     for _, e := range s {
-      *a = append( *a, e )
+      a.resources = append( a.resources, e )
     }
   }
   return nil
@@ -42,19 +86,15 @@ func (a *Resource) UnmarshalJSON( b []byte ) error {
 
 func (a *Resource) MarshalJSON() ( []byte, error ) {
   // nil or empty then marshal null
-  if a == nil || len(*a) == 0 {
+  if a.IsNil() {
     return []byte("null"), nil
   }
 
   // single entry as a string
-  if len(*a) == 1 {
-    return json.Marshal( &(*a)[0] )
+  if a.Len() == 1 {
+    return json.Marshal( &(a.resources[0]) )
   }
 
   // normal json array
-  var v []utils.ARN
-  for _, e := range *a {
-    v = append( v, e )
-  }
-  return json.Marshal( v )
+  return json.Marshal( a.resources )
 }

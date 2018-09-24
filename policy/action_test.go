@@ -140,3 +140,19 @@ func TestAction_Marshal( t *testing.T ) {
   a = NewAction( "s3:*", "*", "cloudformation:*" )
   test_marshall( t, a, "[\"s3:*\",\"*\",\"cloudformation:*\"]" )
 }
+
+func TestAction_Unmarshal_Action( t *testing.T ) {
+
+  const src = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Test\",\"Effect\": \"Deny\",\"Principal\": {\"AWS\": [\"arn:aws:iam::123456789012:root\",\"arn:aws:iam::123456789012:user/Bob\"]},\"Action\": \"s3:*\",\"Resource\": \"arn:aws:s3:::examplebucket/*\",\"Condition\": {\"StringEquals\": {\"s3:signatureversion\": \"AWS4-HMAC-SHA256\"}}}]}"
+  policy := &Policy{}
+
+  testPolicy_Unmarshal( t, policy, src, "\"Action\"" )
+}
+
+func TestAction_Unmarshal_NotAction( t *testing.T ) {
+
+  const src = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Test\",\"Effect\": \"Deny\",\"Principal\": {\"AWS\": [\"arn:aws:iam::123456789012:root\",\"arn:aws:iam::123456789012:user/Bob\"]},\"NotAction\": \"s3:*\",\"Resource\": \"arn:aws:s3:::examplebucket/*\",\"Condition\": {\"StringEquals\": {\"s3:signatureversion\": \"AWS4-HMAC-SHA256\"}}}]}"
+  policy := &Policy{}
+
+  testPolicy_Unmarshal( t, policy, src, "\"NotAction\"" )
+}

@@ -42,15 +42,28 @@ func (a *Statement) UnmarshalJSON( b []byte ) error {
         err = json.Unmarshal( v, &a.Sid)
       case "Effect":
         err = json.Unmarshal( v, &a.Effect)
+
+      // Mutually exclusive
       case "Principal":
         err = json.Unmarshal( v, &a.Principal )
+      case "NotPrincipal":
+        err = json.Unmarshal( v, &a.Principal )
+        a.Principal.negate = true
+
+      // Mutually exclusive
       case "Action":
         err = json.Unmarshal( v, &a.Action)
       case "NotAction":
         err = json.Unmarshal( v, &a.Action)
         a.Action.negate = true
+
+      // Mutually exclusive
       case "Resource":
         err = json.Unmarshal( v, &a.Resource)
+      case "NotResource":
+        err = json.Unmarshal( v, &a.Resource)
+        a.Resource.negate = true
+
       case "Condition":
         err = json.Unmarshal( v, &a.Condition)
     }
