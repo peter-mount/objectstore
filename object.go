@@ -34,7 +34,7 @@ func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
     return err
 	}
 
-	return s.createObject( r, bucketName, objectName, r.Request().Header, reader )
+	return s.createObject( r, "Put", bucketName, objectName, r.Request().Header, reader )
 }
 
 // CreateObjectBrowserUpload creates a new S3 object using a MultipartForm
@@ -56,7 +56,7 @@ func (s *ObjectStore) CreateObjectBrowserUpload( r *rest.Rest ) error {
 	}
 	defer infile.Close()
 
-	return s.createObject( r, bucketName, key, form.Value, infile )
+	return s.createObject( r, "POST", bucketName, key, form.Value, infile )
 }
 
 func (s *ObjectStore) getBody( headers map[string][]string, reader io.Reader ) ([]byte, error) {
@@ -77,7 +77,7 @@ func (s *ObjectStore) getBody( headers map[string][]string, reader io.Reader ) (
 	return body, nil
 }
 
-func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string, headers map[string][]string, reader io.Reader ) error {
+func (s *ObjectStore) createObject( r *rest.Rest, method, bucketName, objectName string, headers map[string][]string, reader io.Reader ) error {
 
 	body, err := s.getBody( headers, reader )
 	if err != nil {
@@ -125,6 +125,8 @@ func (s *ObjectStore) createObject( r *rest.Rest, bucketName, objectName string,
 		if err != nil {
       return err
 		}
+
+    s.sendObjectEvent( "ObjectCreated:" + method, bucketName, obj )
 
 		r.Status( 200 ).
       AddHeader( "Access-Control-Allow-Origin", "*" ).
@@ -277,9 +279,11 @@ func (s *ObjectStore) DeleteObject( r *rest.Rest ) error {
       return nil
 		}
 
-		t := Object{}
-		if exists, _ := t.get( b, objectName ); exists {
-			t.delete( b )
+		obj := &Object{}
+		if exists, _ := obj.get( b, objectName ); exists {
+			obj.delete( b )
+
+      s.sendObjectEvent( "ObjectRemoved:Delete", bucketName, obj )
 		}
 
     r.Status( 204 ).

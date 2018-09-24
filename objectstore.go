@@ -5,14 +5,18 @@ import (
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
   "github.com/peter-mount/objectstore/auth"
+  eventservice "github.com/peter-mount/objectstore/event/service"
   "time"
 )
 
 type ObjectStore struct {
-	authService		*auth.AuthService
+	authService		 *auth.AuthService
   boltService    *bolt.BoltService
+	eventService	 *eventservice.EventService
   restService    *rest.Server
 	timeLocation   *time.Location
+
+	region				*string
 }
 
 type Storage struct {

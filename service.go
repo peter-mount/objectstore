@@ -1,10 +1,13 @@
 package objectstore
 
 import (
+  "flag"
   "github.com/peter-mount/golib/kernel"
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
   "github.com/peter-mount/objectstore/auth"
+  eventservice "github.com/peter-mount/objectstore/event/service"
+  "os"
   "time"
 )
 
@@ -13,6 +16,8 @@ func (s *ObjectStore) Name() string {
 }
 
 func (s *ObjectStore) Init( k *kernel.Kernel ) error {
+
+  s.region = flag.String( "region", "", "Region")
 
   timeLocation, err := time.LoadLocation("GMT")
 	if err != nil {
@@ -38,10 +43,23 @@ func (s *ObjectStore) Init( k *kernel.Kernel ) error {
   }
   s.authService = (service).(*auth.AuthService)
 
+  service, err = k.AddService( &eventservice.EventService{} )
+  if err != nil {
+    return err
+  }
+  s.eventService = (service).(*eventservice.EventService)
+
   return nil
 }
 
 func (s *ObjectStore) PostInit() error {
+
+  if *s.region == "" {
+    *s.region = os.Getenv( "REGION" )
+  }
+  if *s.region == "" {
+    *s.region = "us-east-1"
+  }
 
   r := s.restService
 

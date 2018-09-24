@@ -3,10 +3,14 @@ package utils
 import (
   "encoding/json"
   "fmt"
+  "github.com/peter-mount/go-glob"
+  "github.com/peter-mount/sortfold"
   "strings"
 )
 
-// A representation of an ARN
+// A representation of an ARN.
+// https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-arns
 type ARN struct {
   // "arn" for AWS but allows us to have our own
   Type      string
@@ -24,6 +28,10 @@ type ARN struct {
 
 func NewARN( t, partition, service, region, account, resource string ) *ARN {
   return &ARN{t, partition, service, region, account, resource}
+}
+
+func NewS3ARN( t, region, resource string ) *ARN {
+  return NewARN( t, "aws", "s3", region, "", resource )
 }
 
 func NilARN() *ARN {
@@ -159,4 +167,43 @@ func (a *ARN) MarshalJSON() ( []byte, error ) {
   }
 
   return json.Marshal( a.String() )
+}
+
+// Matches tests an ARN against this one.
+// Note: This ARN may contain globs (*). If the other ARN contains an * then that should fail
+func (a *ARN) Matches( b *ARN ) bool {
+  // If a is nil then b must be nil
+  if a.IsNil() {
+    return b.IsNil()
+  }
+  // b nil then false as a is not nil
+  if b.IsNil() {
+    return false
+  }
+  // If either is Anonymous then both must be to match
+  if a.IsAnonymous() || b.IsAnonymous() {
+    return a.IsAnonymous() && b.IsAnonymous()
+  }
+
+  return arnTest( a.Type, b.Type ) &&
+    arnTest( a.Partition, b.Partition  ) &&
+    arnTest( a.Service, b.Service ) &&
+    arnTest( a.Region, b.Region ) &&
+    arnTest( a.Account, b.Account ) &&
+    arnTest( a.Resource, b.Resource )
+}
+
+func arnTest( a, b string ) bool {
+  // Wildcard so match to true
+  if a == "*" {
+    return true
+  }
+
+  if strings.Contains( a, "*" ) {
+    // Contains "*" so glob pattern
+    return glob.Glob( a, b )
+  }
+
+  // Field is equal
+  return sortfold.CompareFold( a, b ) == 0
 }

@@ -257,6 +257,8 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
       return err
     }
 
+		s.sendObjectEvent( "ObjectCreated:CompleteMultipartUpload", bucketName, obj )
+
     r.Status( 200 ).
       XML().
       Value( &CompleteMultipartUploadResult{
