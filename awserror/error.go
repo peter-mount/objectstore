@@ -16,6 +16,11 @@ type Error struct {
   RequestId   string    `xml:"RequestId"`
 }
 
+// Error enables us to use our error's as a go error
+func (e *Error) Error() string {
+	return fmt.Sprintf( "%d: %s %s", e.Status, e.Code, e.Message )
+}
+
 func (e *Error) Send( r *rest.Rest ) *rest.Rest {
   if e == nil {
     e = AccessDenied()

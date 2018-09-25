@@ -3,10 +3,20 @@ package objectstore
 import (
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
+  "github.com/peter-mount/objectstore/awserror"
   "strings"
   "time"
   "log"
 )
+
+// getBucket returns a bucket or an error if the bucket is not found
+func (s *ObjectStore) getBucket( tx *bolt.Tx, bucketName string ) (*bolt.Bucket,error) {
+  b := tx.Bucket( bucketName )
+  if b == nil {
+    return nil, awserror.NoSuchBucket()
+  }
+  return b, nil
+}
 
 // GetBuckets returns a list of all Buckets
 func (s *ObjectStore) GetBuckets( r *rest.Rest ) error {
@@ -39,8 +49,6 @@ func (s *ObjectStore) GetBuckets( r *rest.Rest ) error {
 
   r.Status( 200 ).
     XML().
-    AccessControlAllowOrigin("").
-    AddHeader( allow_headers, allow_headers_list ).
     Value( &Storage{
       Xmlns:       "http://s3.amazonaws.com/doc/2006-03-01/",
       Id:          "fe7272ea58be830e56fe1663b10fafef",
@@ -54,14 +62,9 @@ func (s *ObjectStore) GetBuckets( r *rest.Rest ) error {
 func (s *ObjectStore) CreateBucket( r *rest.Rest ) error {
 	bucketName := r.Var("BucketName")
 
-  exists := false
   err := s.boltService.Update( func ( tx *bolt.Tx ) error {
-    b := tx.Bucket( bucketName )
-    if b != nil {
-      exists = true
-      return nil;
-    }
-
+    // TODO if bbolt.ErrBucketExists then check ownership & return
+    // BucketAlreadyOwnedByYou if caller is the owner
     _, err := tx.CreateBucket( bucketName )
     return err
   })
@@ -70,15 +73,9 @@ func (s *ObjectStore) CreateBucket( r *rest.Rest ) error {
     return err
   }
 
-  if exists {
-    r.Status( 409 )
-  } else {
-    r.Status( 200 ).
-    AccessControlAllowOrigin("").
-    AddHeader( allow_headers, allow_headers_list ).
+  r.Status( 200 ).
     AddHeader( "Host", r.Request().Host ).
     AddHeader( "Location", "/" + bucketName )
-  }
 
 	return nil
 }
@@ -92,13 +89,13 @@ func (s *ObjectStore) DeleteBucket( r *rest.Rest ) error {
   })
 
   if err != nil {
-    r.Status( 404 )
-  } else {
-    r.Status( 200 ).
+    return err
+  }
+
+  r.Status( 200 ).
     AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
     AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
     AddHeader( "Server", "AmazonS3" )
-  }
 
 	return nil
 }
@@ -107,22 +104,19 @@ func (s *ObjectStore) DeleteBucket( r *rest.Rest ) error {
 func (s *ObjectStore) HeadBucket( r *rest.Rest ) error {
 	bucketName := r.Var("BucketName")
 
-	s.boltService.View( func( tx *bolt.Tx ) error {
-		b := tx.Bucket( bucketName )
-		if b == nil {
-      r.Status( 404 )
-		} else {
-      r.Status( 200 ).
-      AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-      AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-      AddHeader( "Server", "AmazonS3" )
-    }
-
-		return nil
+	err := s.boltService.View( func( tx *bolt.Tx ) error {
+		_, err := s.getBucket( tx, bucketName )
+		return err
 	} )
 
-  r.AccessControlAllowOrigin("").
-    AddHeader( allow_headers, allow_headers_list )
+  if err != nil {
+    return err
+  }
+
+  r.Status( 200 ).
+    AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
+    AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
+    AddHeader( "Server", "AmazonS3" )
 
   return nil
 }
@@ -140,13 +134,11 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
     Contents: []*Content{},
   }
 
-	return s.boltService.View( func( tx *bolt.Tx ) error {
-		// Assume bucket exists and has keys
-		b := tx.Bucket( bucketName )
-		if b == nil {
-      r.Status( 404 )
-			return nil
-		}
+	err := s.boltService.View( func( tx *bolt.Tx ) error {
+    b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
+    }
 
     // prefix with our meta_prefix prefixed to it
     pre := meta_prefix + prefix
@@ -167,14 +159,17 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
       })
 		}
 
-    r.Status( 200 ).
-      XML().
-      AccessControlAllowOrigin("").
-      AddHeader( allow_headers, allow_headers_list ).
-      AddHeader( "Host", r.Request().Host ).
-      AddHeader( "Location", "/" + bucketName ).
-      Value( bucketc )
-
     return nil
 	})
+  if err != nil {
+    return err
+  }
+
+  r.Status( 200 ).
+    XML().
+    AddHeader( "Host", r.Request().Host ).
+    AddHeader( "Location", "/" + bucketName ).
+    Value( bucketc )
+
+  return nil
 }

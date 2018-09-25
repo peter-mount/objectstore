@@ -6,6 +6,7 @@ import (
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
   "github.com/peter-mount/objectstore/auth"
+  "github.com/peter-mount/objectstore/awserror"
   eventservice "github.com/peter-mount/objectstore/event/service"
   "os"
   "time"
@@ -31,7 +32,7 @@ func (s *ObjectStore) Init( k *kernel.Kernel ) error {
   }
   s.boltService = (service).(*bolt.BoltService)
 
-  service, err = k.AddService( &rest.Server{ Port: 80 } )
+  service, err = k.AddService( &rest.Server{} )
   if err != nil {
     return err
   }
@@ -61,36 +62,74 @@ func (s *ObjectStore) PostInit() error {
     *s.region = "us-east-1"
   }
 
-  r := s.restService
-
   // todo Add support to rest for this
   //r.Queries( "marker", "prefix" )
 
   // Note: trailing / required by minio client whilst s3 client doesn't use that
   // List all buckets
-  r.Handle("/", s.GetBuckets).Methods("GET")
-
-	r.Handle("/{BucketName}", s.GetBucket).Methods("GET")
-	r.Handle("/{BucketName}/", s.GetBucket).Methods("GET")
-
-  r.Handle("/{BucketName}", s.HeadBucket).Methods("HEAD")
-  r.Handle("/{BucketName}/", s.HeadBucket).Methods("HEAD")
-
-  r.Handle("/{BucketName}", s.CreateBucket).Methods("PUT")
-  r.Handle("/{BucketName}/", s.CreateBucket).Methods("PUT")
-
-  r.Handle("/{BucketName}", s.DeleteBucket).Methods("DELETE")
-  r.Handle("/{BucketName}/", s.DeleteBucket).Methods("DELETE")
-
-	// Object operations
-  r.Handle("/{BucketName}/", s.CreateObjectBrowserUpload).Methods("POST")
-  r.Handle("/{BucketName}/{ObjectName:.{1,}}", s.CreateObject).Methods("PUT")
-  r.Handle("/{BucketName}/{ObjectName:.{0,}}", s.CreateObject).Methods("POST")
-
-  r.Handle("/{BucketName}/{ObjectName:.{0,}}", s.HeadObject).Methods("HEAD")
-  r.Handle("/{BucketName}/{ObjectName:.{1,}}", s.GetObject).Methods("GET")
-
-  r.Handle("/{BucketName}/{ObjectName:.{1,}}", s.DeleteObject).Methods("DELETE")
+  s.restService.RestBuilder().
+    // Common decorators, applied to every endpoint
+    Decorate( awserror.RestErrorWrapper ).
+    Decorate( (&rest.AddHeadersDecorator{
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private",
+      "X-Clacks-Overhead": "GNU Terry Pratchett",
+    }).Decorator ).
+    // List all buckets
+    Method( "GET" ).
+    Path( "/" ).
+    Handler( s.GetBuckets ).
+    Build().
+    // GetBucket
+    Method( "GET" ).
+    Path( "/{BucketName}", "/{BucketName}/" ).
+    Handler( s.GetBucket ).
+    Build().
+    // Check existence of bucket
+    Method( "HEAD" ).
+    Path( "/{BucketName}", "/{BucketName}/" ).
+    Handler( s.HeadBucket ).
+    Build().
+    // Create bucket
+    Method( "PUT" ).
+    Path( "/{BucketName}", "/{BucketName}/" ).
+    Handler( s.CreateBucket ).
+    Build().
+    // Delete Bucket
+    Method( "DELETE" ).
+    Path( "/{BucketName}", "/{BucketName}/" ).
+    Handler( s.DeleteBucket ).
+    Build().
+    // Post new object - Browser upload
+    Method( "POST" ).
+    Path( "/{BucketName}/" ).
+    Handler( s.CreateObjectBrowserUpload ).
+    Build().
+    // Put new object
+    Method( "PUT" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Handler( s.CreateObject ).
+    Build().
+    // Post new object
+    Method( "POST" ).
+    Path( "/{BucketName}/{ObjectName:.{0,}}" ).
+    Handler( s.CreateObject ).
+    Build().
+    // Check object exists
+    Method( "HEAD" ).
+    Path( "/{BucketName}/{ObjectName:.{0,}}" ).
+    Handler( s.HeadObject ).
+    Build().
+    // Get object
+    Method( "GET" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Handler( s.GetObject ).
+    Build().
+    // Delete object
+    Method( "DELETE" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Handler( s.DeleteObject ).
+    Build()
 
   return nil
 }

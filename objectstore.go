@@ -58,9 +58,6 @@ const (
 	part_suffix					= "\001part"
 	// Meta suffix used to represent a multipart uplaod
 	partmeta_suffix			= "\001partmeta"
-	// The common Access-Control-Allow-Headers header in each response
-	allow_headers       = "Access-Control-Allow-Headers"
-	allow_headers_list  = "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private"
 	// The block size used when reading MultipartForm
 	size_24K = (1 << 20) * 24
 )

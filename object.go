@@ -93,11 +93,10 @@ func (s *ObjectStore) createObject( r *rest.Rest, method, bucketName, objectName
 	}
 
 	return s.boltService.Update( func( tx *bolt.Tx ) error {
-		b := tx.Bucket( bucketName )
-		if b == nil {
-      r.Status( 404 )
-			return nil
-		}
+		b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
+    }
 
 		// Remove any existing object
 		obj := &Object{}
@@ -116,7 +115,7 @@ func (s *ObjectStore) createObject( r *rest.Rest, method, bucketName, objectName
 		}
 
 		// Add the sole part
-		err := obj.putPart( b, body )
+		err = obj.putPart( b, body )
 		if err != nil {
       return err
 		}
@@ -129,7 +128,6 @@ func (s *ObjectStore) createObject( r *rest.Rest, method, bucketName, objectName
     s.sendObjectEvent( "ObjectCreated:" + method, bucketName, obj )
 
 		r.Status( 200 ).
-      AddHeader( "Access-Control-Allow-Origin", "*" ).
   		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
 			Etag( obj.ETag ).
@@ -155,11 +153,10 @@ func (s *ObjectStore) HeadObject( r *rest.Rest ) error {
   objectName := r.Var( "ObjectName" )
 
 	return s.boltService.View( func( tx *bolt.Tx ) error {
-		b := tx.Bucket( bucketName )
-		if b == nil {
-      r.Status( 404 )
-      return nil
-		}
+    b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
+    }
 
     // Get the metadata
 		t := Object{}
@@ -175,8 +172,6 @@ func (s *ObjectStore) HeadObject( r *rest.Rest ) error {
 		}
 
     r.Status( 200 ).
-      AccessControlAllowOrigin("").
-      AddHeader( allow_headers, allow_headers_list ).
 			CacheControl( -1 ).
 			AddHeader( "Accept-Ranges", "bytes" ).
   		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
@@ -199,11 +194,10 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 		bucketName := r.Var( "BucketName" )
 		objectName := r.Var( "ObjectName" )
 
-    b := tx.Bucket( bucketName )
-		if b == nil {
-      r.Status( 404 )
-      return nil
-		}
+    b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
+    }
 
     // Get the metadata
 		t := Object{}
@@ -252,9 +246,7 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 
 		t.addHeaders( r )
 
-    r.AccessControlAllowOrigin("").
-      AddHeader( allow_headers, allow_headers_list ).
-			CacheControl( -1 ).
+    r.CacheControl( -1 ).
 			AddHeader( "Accept-Ranges", "bytes" ).
 			AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
@@ -273,11 +265,10 @@ func (s *ObjectStore) DeleteObject( r *rest.Rest ) error {
   objectName := r.Var( "ObjectName" )
 
 	return s.boltService.Update( func( tx *bolt.Tx ) error {
-    b := tx.Bucket( bucketName )
-		if b == nil {
-      r.Status( 404 )
-      return nil
-		}
+    b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
+    }
 
 		obj := &Object{}
 		if exists, _ := obj.get( b, objectName ); exists {
@@ -287,8 +278,6 @@ func (s *ObjectStore) DeleteObject( r *rest.Rest ) error {
 		}
 
     r.Status( 204 ).
-      AccessControlAllowOrigin("").
-      AddHeader( allow_headers, allow_headers_list ).
   		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
   		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
   		AddHeader( "Content-Length", "0" ).
