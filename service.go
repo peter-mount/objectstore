@@ -67,14 +67,17 @@ func (s *ObjectStore) PostInit() error {
 
   // Note: trailing / required by minio client whilst s3 client doesn't use that
   // List all buckets
-  s.restService.RestBuilder().
+  builder := s.restService.RestBuilder().
     // Common decorators, applied to every endpoint
     Decorate( awserror.RestErrorWrapper ).
     Decorate( (&rest.AddHeadersDecorator{
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private",
       "X-Clacks-Overhead": "GNU Terry Pratchett",
-    }).Decorator ).
+    }).Decorator )
+
+  // Bucket operations
+  builder.
     // List all buckets
     Method( "GET" ).
     Path( "/" ).
@@ -99,33 +102,71 @@ func (s *ObjectStore) PostInit() error {
     Method( "DELETE" ).
     Path( "/{BucketName}", "/{BucketName}/" ).
     Handler( s.DeleteBucket ).
-    Build().
+    Build()
+
+  // Multipart Uploads
+  builder.
     // Post new object - Browser upload
     Method( "POST" ).
     Path( "/{BucketName}/" ).
     Handler( s.CreateObjectBrowserUpload ).
     Build().
-    // Put new object
+    // initiateMultipart
+    // Should be put but s3cmd uses post
+    Method( "POST", "PUT" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Queries( "uploads", "" ).
+    Handler( s.initiateMultipart ).
+    Build().
+    // uploadPart
     Method( "PUT" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
-    Handler( s.CreateObject ).
+    Queries(
+      "partNumber", "{PartNumber}",
+      "uploadId", "{UploadId}",
+    ).
+    Handler( s.uploadPart ).
+    Build().
+    // completeMultipart
+    Method( "PUT" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Queries( "uploadId", "{UploadId}").
+    Handler( s.completeMultipart ).
+    Build()
+
+    // Object upload - non multipart
+  builder.
+    Method( "PUT" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Handler( s.uploadObject ).
     Build().
     // Post new object
     Method( "POST" ).
     Path( "/{BucketName}/{ObjectName:.{0,}}" ).
-    Handler( s.CreateObject ).
+    Handler( s.uploadObject ).
     Build().
-    // Check object exists
+    // Post new object - Browser upload
+    Method( "POST" ).
+    Path( "/{BucketName}/" ).
+    Handler( s.CreateObjectBrowserUpload ).
+    Build()
+
+  // Check object exists
+  builder.
     Method( "HEAD" ).
     Path( "/{BucketName}/{ObjectName:.{0,}}" ).
     Handler( s.HeadObject ).
-    Build().
-    // Get object
+    Build()
+
+  // Get object
+  builder.
     Method( "GET" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Handler( s.GetObject ).
-    Build().
-    // Delete object
+    Build()
+
+  // Delete object
+  builder.
     Method( "DELETE" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Handler( s.DeleteObject ).

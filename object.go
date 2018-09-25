@@ -12,20 +12,7 @@ import (
 )
 
 // CreateObject creates a new S3 object.
-func (s *ObjectStore) CreateObject( r *rest.Rest ) error {
-
-	// Delegate to multipart if necessary
-	query := r.Request().URL.Query()
-	if _, ok := query["uploads"]; ok {
-		return s.initiateMultipart( r )
-	}
-	if _, ok := query["partNumber"]; ok {
-		return s.uploadPart( r )
-	}
-	if _, ok := query["uploadId"]; ok {
-		return s.completeMultipart( r )
-	}
-
+func (s *ObjectStore) uploadObject( r *rest.Rest ) error {
 	bucketName := r.Var( "BucketName" )
   objectName := r.Var( "ObjectName" )
 

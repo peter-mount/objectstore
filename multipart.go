@@ -132,10 +132,8 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 
   return s.boltService.Update( func( tx *bolt.Tx ) error {
     bucketName := r.Var( "BucketName" )
-
-  	query := r.Request().URL.Query()
-    partNumber := query["partNumber"][0]
-    uploadId := query["uploadId"][0]
+		partNumber := r.Var( "PartNumber" )
+    uploadId := r.Var( "UploadId" )
 
     b := tx.Bucket( bucketName )
     if b == nil {
@@ -180,9 +178,7 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 
 func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
   bucketName := r.Var( "BucketName" )
-
-  query := r.Request().URL.Query()
-  uploadId := query["uploadId"][0]
+	uploadId := r.Var( "UploadId" )
 
   // Get payload
   reader, err := r.BodyReader()
