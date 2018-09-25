@@ -1,11 +1,9 @@
 package service
 
 import (
-  "encoding/json"
   "flag"
   "github.com/peter-mount/golib/kernel"
   "github.com/peter-mount/objectstore/event"
-  "log"
 )
 
 // Event service for publishers
@@ -64,13 +62,7 @@ func (a *EventService) publisher() {
       evt.S3.Version = "1.0"
     }
 
-    b, err := json.MarshalIndent( evt, "", "  " )
-    if err != nil {
-      log.Println( err )
-    }
-    log.Printf( "Event:\n %s", string(b[:]) )
-
     // Pass to each possible broker here
-    err = a.publishRabbit( evt )
+    a.publishRabbit( evt )
   }
 }
