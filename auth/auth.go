@@ -6,6 +6,26 @@ import (
   "strings"
   "log"
 )
+const (
+  AUTH_KEY = "RequestCredential"
+)
+
+// AuthenticatorDecorator rest decorator to try to resolve the requests authentication
+func (s *AuthService) AuthenticatorDecorator( h rest.RestHandler ) rest.RestHandler {
+  return func ( r *rest.Rest ) error {
+    cred, err := s.GetCredential( r )
+    if err != nil {
+      return err
+    }
+
+    if s.config.Auth.Debug {
+      log.Println( cred )
+    }
+
+    r.SetAttribute( AUTH_KEY, cred )
+    return h(r)
+  }
+}
 
 func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
 
@@ -36,12 +56,12 @@ func (s *AuthService) GetCredential( r *rest.Rest ) (*Credential,error) {
       log.Println( "Unsupported Authorization method:", authorization )
     }
 
-    return errorCredential( awserror.CredentialsNotSupported() ), nil
+    return nil, awserror.CredentialsNotSupported()
   }
 
   // TODO query params
   // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 
   // Deny access
-  return invalidCredential(), nil
+  return denyCredential(), nil
 }

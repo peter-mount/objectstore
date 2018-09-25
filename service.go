@@ -69,6 +69,7 @@ func (s *ObjectStore) PostInit() error {
   // List all buckets
   builder := s.restService.RestBuilder().
     // Common decorators, applied to every endpoint
+    Decorate( s.authService.AuthenticatorDecorator ).
     Decorate( awserror.RestErrorWrapper ).
     Decorate( (&rest.AddHeadersDecorator{
       "Access-Control-Allow-Origin": "*",

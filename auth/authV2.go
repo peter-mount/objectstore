@@ -189,16 +189,16 @@ func (s *AuthService) getAWS2CredentialHeader( authorization string, r *rest.Res
   a = strings.SplitN( a[1], ":", 2 )
   user := s.getUser( a[0] )
   if user == nil {
-    return errorCredential( awserror.AccessDenied() ), nil
+    return nil, awserror.AccessDenied()
   }
 
   signature, err := signV2( r, user.AccessKey, user.SecretKey )
   if err != nil {
-    return errorCredential( awserror.InternalError() ), nil
+    return nil, err
   }
 
   if signature != authorization {
-    return errorCredential( awserror.AccessDenied() ), nil
+    return nil, awserror.AccessDenied()
   }
 
   return userCredential( user ), nil

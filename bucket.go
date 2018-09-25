@@ -6,7 +6,6 @@ import (
   "github.com/peter-mount/objectstore/awserror"
   "strings"
   "time"
-  "log"
 )
 
 // getBucket returns a bucket or an error if the bucket is not found
@@ -20,23 +19,12 @@ func (s *ObjectStore) getBucket( tx *bolt.Tx, bucketName string ) (*bolt.Bucket,
 
 // GetBuckets returns a list of all Buckets
 func (s *ObjectStore) GetBuckets( r *rest.Rest ) error {
-  cred, err := s.authService.GetCredential( r )
-  if err != nil {
-    log.Println( err )
-    return err
-  }
-  if cred.IsInvalid() {
-    cred.SendErrorResponse( r )
-    return nil
-  }
-
-  log.Println( "Got Credential", cred )
 
   buckets := []BucketInfo{}
 
   now := s.timeNowRFC()
 
-  err = s.boltService.View( func( tx *bolt.Tx ) error {
+  err := s.boltService.View( func( tx *bolt.Tx ) error {
     return tx.ForEach( func( name string, _ *bolt.Bucket ) error {
       buckets = append( buckets, BucketInfo{name,now} )
       return nil

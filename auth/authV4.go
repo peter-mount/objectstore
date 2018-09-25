@@ -108,10 +108,6 @@ func getStringToSignV4(t time.Time, location, canonicalRequest string) string {
 	return stringToSign
 }
 
-func invalidAuth( authorization string ) *Credential {
-  return errorCredential( awserror.InvalidArgument( "Invalid Authorization: %s", authorization ) )
-}
-
 // getV4Credential extracts the content of the Authorization header.
 //
 // Returns m, accessKey, location, service, valid:
@@ -164,12 +160,12 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
 
   m, accessKey, location, _, valid := s.getV4Credential( authorization )
   if !valid {
-    return invalidAuth( authorization ), nil
+    return nil, awserror.InvalidArgument( "Invalid Authorization: %s", authorization )
   }
 
   user := s.getUser( accessKey )
   if user == nil {
-    return invalidCredential(), nil
+    return nil, awserror.AccessDenied()
   }
   if s.config.Auth.Debug {
     log.Println( "User:", user )
@@ -198,7 +194,7 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
   }
 
   if signature != m["signature"] {
-    return errorCredential( awserror.AccessDenied() ), nil
+    return nil, awserror.AccessDenied()
   }
 
   return userCredential( user ), nil
