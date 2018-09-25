@@ -104,16 +104,17 @@ func (s *ObjectStore) PostInit() error {
     Handler( s.DeleteBucket ).
     Build()
 
-  // Multipart Uploads
-  builder.
-    // Post new object - Browser upload
+  // Browser upload
+    builder.
     Method( "POST" ).
     Path( "/{BucketName}/" ).
     Handler( s.CreateObjectBrowserUpload ).
-    Build().
+    Build()
+
+  // Multipart Uploads
+  builder.
     // initiateMultipart
-    // Should be put but s3cmd uses post
-    Method( "POST", "PUT" ).
+    Method( "POST" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Queries( "uploads", "" ).
     Handler( s.initiateMultipart ).
