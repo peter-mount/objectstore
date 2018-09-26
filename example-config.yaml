@@ -18,6 +18,7 @@ rootUser:
   # The API access & secret keys
   accessKey: "BKIKJAA5BMMU2RHO6IBB"
   secretKey: "V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12"
+  arn: "arn:aws:iam::123456789012:"
 
 # This is a map of individual users who can have separate permissions assigned
 # to them.

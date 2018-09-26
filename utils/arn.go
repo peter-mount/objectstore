@@ -207,3 +207,16 @@ func arnTest( a, b string ) bool {
   // Field is equal
   return sortfold.CompareFold( a, b ) == 0
 }
+
+func (a *ARN) UnmarshalYAML( f func(interface{}) error ) error {
+  var s string
+  err := f( &s )
+  if err == nil {
+    err = a.Parse( s )
+  }
+  return err
+}
+
+func (a *ARN) MarshalYAML() (interface{},error) {
+  return a.String, nil
+}
