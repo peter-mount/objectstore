@@ -61,6 +61,14 @@ func CredentialsNotSupported() *Error {
   }
 }
 
+func InvalidAccessKeyId() *Error {
+  return &Error{
+    Status:   http.StatusForbidden,
+    Code:     "InvalidAccessKeyId",
+    Message:  "The AWS access key ID you provided does not exist in our records.",
+  }
+}
+
 func InvalidArgument( f string, a ...interface{}) *Error {
   if f == "" {
     f = "Invalid Argument"

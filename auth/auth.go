@@ -6,6 +6,7 @@ import (
   "strings"
   "log"
 )
+
 const (
   AUTH_KEY = "RequestCredential"
 )

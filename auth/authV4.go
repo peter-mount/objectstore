@@ -5,8 +5,6 @@ import (
   "encoding/hex"
   "github.com/peter-mount/golib/rest"
   "github.com/peter-mount/objectstore/awserror"
-  "net/http"
-  "sort"
   "strings"
   "time"
   "log"
@@ -26,56 +24,23 @@ var ignoredHeaders = map[string]bool{
 
 // getCanonicalHeaders generate a list of request headers for
 // signature.
-func getCanonicalHeaders( r *rest.Rest ) string {
-	var headers []string
-	vals := make(map[string][]string)
-	for k, vv := range r.Request().Header {
-		if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
-			continue // ignored header
-		}
-		headers = append(headers, strings.ToLower(k))
-		vals[strings.ToLower(k)] = vv
-	}
-	headers = append(headers, "host")
-	sort.Strings(headers)
-
-	var buf bytes.Buffer
+func getCanonicalHeaders( r *rest.Rest, m map[string]string ) string {
 	// Save all the headers in canonical form <header>:<value> newline
 	// separated for each header.
-	for _, k := range headers {
+  var buf bytes.Buffer
+	for _, k := range strings.Split( m["signedheaders"], ";" ) {
 		buf.WriteString(k)
 		buf.WriteByte(':')
 		switch {
-		case k == "host":
-			buf.WriteString( getHostAddr( r ) )
-			fallthrough
-		default:
-			for idx, v := range vals[k] {
-				if idx > 0 {
-					buf.WriteByte(',')
-				}
-				buf.WriteString(v)
-			}
-			buf.WriteByte('\n')
+  		case k == "host":
+  			buf.WriteString( getHostAddr( r ) )
+  			fallthrough
+  		default:
+        buf.WriteString( m[k] )
+  			buf.WriteByte( '\n' )
 		}
 	}
 	return buf.String()
-}
-
-// getSignedHeaders generate all signed request headers.
-// i.e lexically sorted, semicolon-separated list of lowercase
-// request header names.
-func getSignedHeaders( r *rest.Rest ) string {
-	var headers []string
-	for k := range r.Request().Header {
-		if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
-			continue // Ignored header found continue.
-		}
-		headers = append(headers, strings.ToLower(k))
-	}
-	headers = append(headers, "host")
-	sort.Strings(headers)
-	return strings.Join(headers, ";")
 }
 
 // getCanonicalRequest generate a canonical request of style.
@@ -87,14 +52,14 @@ func getSignedHeaders( r *rest.Rest ) string {
 //  <CanonicalHeaders>\n
 //  <SignedHeaders>\n
 //  <HashedPayload>
-func getCanonicalRequest( r *rest.Rest ) string {
+func getCanonicalRequest( r *rest.Rest, m map[string]string ) string {
 	r.Request().URL.RawQuery = strings.Replace(r.Request().URL.Query().Encode(), "+", "%20", -1)
 	canonicalRequest := strings.Join([]string{
 		r.Request().Method,
 		encodePath(r.Request().URL.Path),
 		r.Request().URL.RawQuery,
-		getCanonicalHeaders( r ),
-		getSignedHeaders( r ),
+		getCanonicalHeaders( r, m ),
+		m["signedheaders"],
 		getHashedPayload( r ),
 	}, "\n")
 	return canonicalRequest
@@ -117,12 +82,17 @@ func getStringToSignV4(t time.Time, location, canonicalRequest string) string {
 //   location usually us-east-1
 //   service "s3" but could be different for other services
 //
-func (s *AuthService) getV4Credential( authorization string ) (map[string]string, string, string, string, bool ) {
+func (s *AuthService) getV4Credential( authorization string, r *rest.Rest ) (map[string]string, string, string, string, bool ) {
   a := strings.SplitN( authorization, " ", 2 )
   if len( a ) == 2 {
 
-    // The credential header
     m := make(map[string]string)
+
+    for k,v := range r.Request().Header {
+      m[strings.ToLower(k)] = strings.Join( v, "," )
+    }
+
+    // The credential header
     for _,e := range strings.Split( a[1], "," ) {
       v := strings.SplitN( strings.TrimSpace( e ), "=", 2 )
       if len(v) == 2 {
@@ -158,33 +128,28 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
     return nil, err
   }
 
-  m, accessKey, location, _, valid := s.getV4Credential( authorization )
+  m, accessKey, location, _, valid := s.getV4Credential( authorization, r )
   if !valid {
     return nil, awserror.InvalidArgument( "Invalid Authorization: %s", authorization )
   }
 
   user := s.getUser( accessKey )
   if user == nil {
-    return nil, awserror.AccessDenied()
+    return nil, awserror.InvalidAccessKeyId()
   }
   if s.config.Auth.Debug {
-    log.Println( "User:", user )
+    log.Println( "User:", user.AccessKey, user.SecretKey, user.Arn )
   }
 
   // Get canonical request.
-  canonicalRequest := getCanonicalRequest( r )
+  canonicalRequest := getCanonicalRequest( r, m )
+  log.Printf( "canonicalRequest\n%s", canonicalRequest)
 
   // Get string to sign from canonical request.
-  stringToSign := getStringToSignV4(t, location, canonicalRequest)
+  stringToSign := getStringToSignV4( t, location, canonicalRequest )
 
   // Get hmac signing key.
   signingKey := getSigningKey( user.SecretKey, location, t )
-
-  // Get credential string.
-  //credential := getCredential( user.SecretKey, location, t )
-
-  // Get all signed headers.
-  //signedHeaders := getSignedHeaders( r )
 
   // Calculate signature.
   signature := getSignature( signingKey, stringToSign )

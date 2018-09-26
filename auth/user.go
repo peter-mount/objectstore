@@ -1,8 +1,17 @@
 package auth
 
+import (
+  "github.com/peter-mount/objectstore/utils"
+)
+
 type User struct {
-  AccessKey   string  `json:"accessKey" yaml:"accessKey"`
-  SecretKey   string  `json:"secretKey" yaml:"secretKey"`
+  // The users AccessKey
+  AccessKey   string      `json:"accessKey" yaml:"accessKey"`
+  // The users SecretKey
+  SecretKey   string      `json:"secretKey" yaml:"secretKey"`
+  // The users arn
+  Arn         utils.ARN   `json:"arn" yaml:"arn"`
+  // true if this user is root
   root        bool
 }
 
