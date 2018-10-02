@@ -5,9 +5,9 @@ import (
   "encoding/hex"
   "github.com/peter-mount/golib/rest"
   "github.com/peter-mount/objectstore/awserror"
+  "log"
   "strings"
   "time"
-  "log"
 )
 
 // Signature and API related constants.
@@ -54,7 +54,7 @@ func getCanonicalHeaders( r *rest.Rest, m map[string]string ) string {
 //  <HashedPayload>
 func getCanonicalRequest( r *rest.Rest, m map[string]string ) string {
 	r.Request().URL.RawQuery = strings.Replace(r.Request().URL.Query().Encode(), "+", "%20", -1)
-	canonicalRequest := strings.Join([]string{
+	return strings.Join([]string{
 		r.Request().Method,
 		encodePath(r.Request().URL.Path),
 		r.Request().URL.RawQuery,
@@ -62,7 +62,6 @@ func getCanonicalRequest( r *rest.Rest, m map[string]string ) string {
 		m["signedheaders"],
 		getHashedPayload( r ),
 	}, "\n")
-	return canonicalRequest
 }
 
 // getStringToSign a string based on selected query values.
@@ -143,7 +142,9 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
 
   // Get canonical request.
   canonicalRequest := getCanonicalRequest( r, m )
-  log.Printf( "canonicalRequest\n%s", canonicalRequest)
+  if s.config.Auth.Debug {
+    log.Printf( "canonicalRequest\n%s", canonicalRequest)
+  }
 
   // Get string to sign from canonical request.
   stringToSign := getStringToSignV4( t, location, canonicalRequest )
