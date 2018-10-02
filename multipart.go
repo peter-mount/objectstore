@@ -7,6 +7,7 @@ import (
   "fmt"
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
+  "github.com/peter-mount/objectstore/awserror"
   "gopkg.in/mgo.v2/bson"
   "time"
 )
@@ -23,14 +24,13 @@ type MultipartUpload struct {
   Time      	time.Time
 }
 
-func (u *MultipartUpload) get( b *bolt.Bucket, uploadId string ) (bool,error) {
+func (u *MultipartUpload) get( b *bolt.Bucket, uploadId string ) error {
 	v := b.Get( uploadId + partmeta_suffix )
 	if v == nil {
-		return false, nil
+		return awserror.NoSuchUpload()
 	}
 
-	err := bson.Unmarshal(v, u)
-	return err == nil, err
+	return bson.Unmarshal(v, u)
 }
 
 func (u *MultipartUpload) put( b *bolt.Bucket ) error {
@@ -83,10 +83,9 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
     bucketName := r.Var( "BucketName" )
     objectName := r.Var( "ObjectName" )
 
-    b := tx.Bucket( bucketName )
-    if b == nil {
-      r.Status( 404 )
-      return nil
+		b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
     }
 
     // Generate the uploadId from the bucketName, objectName & start time
@@ -96,7 +95,7 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
     uploadId := hex.EncodeToString(hash[:])
 
     upload := &MultipartUpload{ objectName, uploadId, make( map[string]string), startTime }
-    err := upload.put( b )
+    err = upload.put( b )
     if err != nil {
       return err
     }
@@ -135,17 +134,15 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 		partNumber := r.Var( "PartNumber" )
     uploadId := r.Var( "UploadId" )
 
-    b := tx.Bucket( bucketName )
-    if b == nil {
-      r.Status( 404 )
-      return nil
+		b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
     }
 
     // Get the metadata
     upload := MultipartUpload{}
-    if ok, err := upload.get( b, uploadId ); !ok || err != nil {
-      r.Status( 404 )
-			return nil
+    if err := upload.get( b, uploadId ); err != nil {
+			return err
 		}
 
     partKey := uploadId + part_suffix + partNumber
@@ -198,17 +195,15 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
   }
 
   return s.boltService.Update( func( tx *bolt.Tx ) error {
-    b := tx.Bucket( bucketName )
-    if b == nil {
-      r.Status( 404 )
-      return nil
+		b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
     }
 
     // Get the metadata
     upload := MultipartUpload{}
-    if ok, err := upload.get( b, uploadId ); !ok || err != nil {
-      r.Status( 404 )
-			return nil
+		if err := upload.get( b, uploadId ); err != nil {
+			return err
 		}
 
     meta := make(map[string]string)
@@ -231,9 +226,9 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
 
       d := b.Get( n )
       if d == nil {
-        r.Status( 500 )
-  			return fmt.Errorf( "Missing data for part uploadId %s part %s name %s", uploadId, p.PartNumber, n )
+				return awserror.InvalidPart()
       }
+			// TODO should check part's etag matches & if not return InvalidPart
 
       // Write this part
       err = obj.putPart( b, d )
@@ -263,6 +258,29 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
         Key: obj.Name,
         ETag: obj.ETag,
       })
+
+    return nil
+  } )
+}
+
+func (s *ObjectStore) abortMultipart( r *rest.Rest ) error {
+  bucketName := r.Var( "BucketName" )
+	uploadId := r.Var( "UploadId" )
+
+  return s.boltService.Update( func( tx *bolt.Tx ) error {
+		b, err := s.getBucket( tx, bucketName )
+    if err != nil {
+      return err
+    }
+
+    // Get the metadata
+    upload := MultipartUpload{}
+		if err := upload.get( b, uploadId ); err != nil {
+			return err
+		}
+    upload.delete( b )
+
+    r.Status( 204 )
 
     return nil
   } )

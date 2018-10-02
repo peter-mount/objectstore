@@ -134,6 +134,12 @@ func (s *ObjectStore) PostInit() error {
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Queries( "uploadId", "{UploadId}").
     Handler( s.completeMultipart ).
+    Build().
+    // abortMultipart
+    Method( "DELETE" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Queries( "uploadId", "{UploadId}").
+    Handler( s.abortMultipart ).
     Build()
 
     // Object upload - non multipart
