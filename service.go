@@ -130,7 +130,7 @@ func (s *ObjectStore) PostInit() error {
     Handler( s.uploadPart ).
     Build().
     // completeMultipart
-    Method( "PUT" ).
+    Method( "POST" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Queries( "uploadId", "{UploadId}").
     Handler( s.completeMultipart ).
