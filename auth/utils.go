@@ -5,10 +5,8 @@ import (
 	"crypto/sha256"
   "encoding/hex"
   "github.com/peter-mount/golib/rest"
-	//"net/http"
 	"regexp"
   "strings"
-  "time"
   "unicode/utf8"
 )
 
@@ -22,22 +20,17 @@ const (
 // if object matches reserved string, no need to encode them
 var reservedObjectNames = regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
 
-func getSigningDate( r *rest.Rest ) (time.Time, error) {
+func getSigningDate( r *rest.Rest ) string {
   v, ok := r.Request().Header["X-Amz-Date"]
   if !ok {
     v, ok = r.Request().Header["Date"]
   }
-  if !ok {
-    t, err := time.Parse( iso8601DateFormat, v[0] )
-    return t, err
-  }
-  // FIXME this should fail if not in the same minute
-  return time.Now().UTC(), nil
+	return v[0]
 }
 
 // getSigningKey hmac seed to calculate final signature.
-func getSigningKey(secret, loc string, t time.Time) []byte {
-	date := sumHMAC([]byte("AWS4"+secret), []byte(t.Format(yyyymmdd)))
+func getSigningKey(secret, loc string, t string) []byte {
+	date := sumHMAC([]byte("AWS4"+secret), []byte(t[0:8]))
 	location := sumHMAC(date, []byte(loc))
 	service := sumHMAC(location, []byte("s3"))
 	signingKey := sumHMAC(service, []byte("aws4_request"))
@@ -51,9 +44,9 @@ func getSignature(signingKey []byte, stringToSign string) string {
 
 // getScope generate a string of a specific date, an AWS region, and a
 // service.
-func getScope(location string, t time.Time) string {
+func getScope(location string, t string) string {
 	scope := strings.Join([]string{
-		t.Format(yyyymmdd),
+		t[0:8],
 		location,
 		"s3",
 		"aws4_request",
@@ -73,7 +66,7 @@ func getHashedPayload( r *rest.Rest ) string {
 }
 
 // GetCredential generate a credential string.
-func getCredential(accessKeyID, location string, t time.Time) string {
+func getCredential(accessKeyID, location string, t string) string {
 	scope := getScope(location, t)
 	return accessKeyID + "/" + scope
 }

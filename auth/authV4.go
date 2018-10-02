@@ -7,7 +7,6 @@ import (
   "github.com/peter-mount/objectstore/awserror"
   "log"
   "strings"
-  "time"
 )
 
 // Signature and API related constants.
@@ -65,11 +64,8 @@ func getCanonicalRequest( r *rest.Rest, m map[string]string ) string {
 }
 
 // getStringToSign a string based on selected query values.
-func getStringToSignV4(t time.Time, location, canonicalRequest string) string {
-	stringToSign := signV4Algorithm + "\n" + t.Format(iso8601DateFormat) + "\n"
-	stringToSign = stringToSign + getScope(location, t) + "\n"
-	stringToSign = stringToSign + hex.EncodeToString(sum256([]byte(canonicalRequest)))
-	return stringToSign
+func getStringToSignV4(t string, location, canonicalRequest string) string {
+  return strings.Join([]string{ signV4Algorithm, t, getScope(location, t), hex.EncodeToString(sum256([]byte(canonicalRequest))) }, "\n" )
 }
 
 // getV4Credential extracts the content of the Authorization header.
@@ -122,10 +118,7 @@ func (s *AuthService) getV4Credential( authorization string, r *rest.Rest ) (map
 func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Rest ) (*Credential,error) {
 
   // The X-Amz-Date or Date header
-  t, err := getSigningDate( r )
-  if err != nil {
-    return nil, err
-  }
+  t := getSigningDate( r )
 
   m, accessKey, location, _, valid := s.getV4Credential( authorization, r )
   if !valid {
@@ -160,6 +153,11 @@ func (s *AuthService) getAWS4CredentialHeader( authorization string, r *rest.Res
   }
 
   if signature != m["signature"] {
+    // If debug include extra debugging as we've had valid requests fail due to incorrect times
+    if s.config.Auth.Debug {
+      log.Printf( "host %s location %s time %v secret %s", getHostAddr( r ), location, t, user.SecretKey )
+      log.Printf( "canonicalRequest\n%s", canonicalRequest)
+    }
     return nil, awserror.AccessDenied()
   }
 
