@@ -9,6 +9,7 @@ import (
   "github.com/peter-mount/golib/rest"
   "github.com/peter-mount/objectstore/awserror"
   "gopkg.in/mgo.v2/bson"
+	"strings"
   "time"
 )
 
@@ -22,6 +23,8 @@ type MultipartUpload struct {
   // Time of when upload was initiated.
   // TODO this is for future use, we'll use this to cleanup incomplete uploads
   Time      	time.Time
+	// Metadata
+	Meta				map[string]string
 }
 
 func (u *MultipartUpload) get( b *bolt.Bucket, uploadId string ) error {
@@ -79,6 +82,7 @@ type MultipartUploadPart struct {
 // initiateMultipart initiates a multipart upload
 // See https://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadInitiate.html
 func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
+
   return s.boltService.Update( func( tx *bolt.Tx ) error {
     bucketName := r.Var( "BucketName" )
     objectName := r.Var( "ObjectName" )
@@ -94,7 +98,20 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
     hash := md5.Sum( []byte(fullName) )
     uploadId := hex.EncodeToString(hash[:])
 
-    upload := &MultipartUpload{ objectName, uploadId, make( map[string]string), startTime }
+    upload := &MultipartUpload{
+			objectName,
+			uploadId,
+			make( map[string]string),
+			startTime,
+			make( map[string]string),
+		}
+
+		// Extract the headers for the meta-data
+		for hk, hv := range r.Request().Header {
+			if strings.HasPrefix(hk, "X-Amz-") || hk == "Content-Type" {
+				upload.Meta[hk] = hv[0]
+			}
+		}
     err = upload.put( b )
     if err != nil {
       return err
@@ -206,10 +223,9 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
 			return err
 		}
 
-    meta := make(map[string]string)
     obj := &Object{
       upload.ObjectName,
-      meta,
+      upload.Meta,
       s.timeNow(),
       0,
       "",
