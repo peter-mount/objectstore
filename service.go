@@ -168,6 +168,13 @@ func (s *ObjectStore) PostInit() error {
 
   // Get object
   builder.
+    // Get Object ACL
+    Method( "GET" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Queries( "acl", "").
+    Handler( s.getObjectAcl ).
+    Build().
+    // Get object
     Method( "GET" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Handler( s.GetObject ).
