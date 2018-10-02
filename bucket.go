@@ -134,7 +134,7 @@ func (s *ObjectStore) GetBucket( r *rest.Rest ) error {
 		c := b.Cursor()
 		for k, v := c.Seek( meta_prefix ); k != "" && strings.HasPrefix( k, pre ); k, v = c.Next() {
       t := Object{}
-      if _, err := t.getBytes( v ); err != nil {
+      if err := t.getBytes( v ); err != nil {
         return err
       }
 

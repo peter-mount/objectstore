@@ -82,60 +82,63 @@ type MultipartUploadPart struct {
 // initiateMultipart initiates a multipart upload
 // See https://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadInitiate.html
 func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
+	bucketName := r.Var( "BucketName" )
+	objectName := r.Var( "ObjectName" )
 
-  return s.boltService.Update( func( tx *bolt.Tx ) error {
-    bucketName := r.Var( "BucketName" )
-    objectName := r.Var( "ObjectName" )
+	// Generate the uploadId from the bucketName, objectName & start time
+	startTime := s.timeNow()
+	fullName := fmt.Sprintf( "%s\002%s\002%s", bucketName, objectName, startTime.Format(time.RFC3339) )
+	hash := md5.Sum( []byte(fullName) )
+	uploadId := hex.EncodeToString(hash[:])
 
+	upload := &MultipartUpload{
+		objectName,
+		uploadId,
+		make( map[string]string),
+		startTime,
+		make( map[string]string),
+	}
+
+	// Extract the headers for the meta-data
+	for hk, hv := range r.Request().Header {
+		if strings.HasPrefix(hk, "X-Amz-") || hk == "Content-Type" {
+			upload.Meta[hk] = hv[0]
+		}
+	}
+
+  err := s.boltService.Update( func( tx *bolt.Tx ) error {
 		b, err := s.getBucket( tx, bucketName )
     if err != nil {
       return err
     }
-
-    // Generate the uploadId from the bucketName, objectName & start time
-    startTime := s.timeNow()
-    fullName := fmt.Sprintf( "%s\002%s\002%s", bucketName, objectName, startTime.Format(time.RFC3339) )
-    hash := md5.Sum( []byte(fullName) )
-    uploadId := hex.EncodeToString(hash[:])
-
-    upload := &MultipartUpload{
-			objectName,
-			uploadId,
-			make( map[string]string),
-			startTime,
-			make( map[string]string),
-		}
-
-		// Extract the headers for the meta-data
-		for hk, hv := range r.Request().Header {
-			if strings.HasPrefix(hk, "X-Amz-") || hk == "Content-Type" {
-				upload.Meta[hk] = hv[0]
-			}
-		}
-    err = upload.put( b )
-    if err != nil {
-      return err
-    }
-
-    r.Status( 200 ).
-      AddHeader( "Access-Control-Allow-Origin", "*" ).
-      AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-      AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-      AddHeader( "Server", "AmazonS3" ).
-      XML().
-      Value( &InitiateMultipartUploadResult{
-        Bucket: bucketName,
-        Key: objectName,
-        UploadId: uploadId,
-      } )
-
-    return nil
+    return upload.put( b )
   } )
+	if err != nil {
+		return err
+	}
+
+	r.Status( 200 ).
+		AddHeader( "Access-Control-Allow-Origin", "*" ).
+		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
+		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
+		AddHeader( "Server", "AmazonS3" ).
+		XML().
+		Value( &InitiateMultipartUploadResult{
+			Bucket: bucketName,
+			Key: objectName,
+			UploadId: uploadId,
+		} )
+
+	return nil
 }
 
 // uploadPart handles the upload of a part
 // see https://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadUploadPart.html
 func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
+	bucketName := r.Var( "BucketName" )
+	partNumber := r.Var( "PartNumber" )
+	uploadId := r.Var( "UploadId" )
+
   reader, err := r.BodyReader()
   if err != nil {
     return err
@@ -146,18 +149,14 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
     return err
   }
 
-  return s.boltService.Update( func( tx *bolt.Tx ) error {
-    bucketName := r.Var( "BucketName" )
-		partNumber := r.Var( "PartNumber" )
-    uploadId := r.Var( "UploadId" )
-
+  err = s.boltService.Update( func( tx *bolt.Tx ) error {
 		b, err := s.getBucket( tx, bucketName )
     if err != nil {
       return err
     }
 
     // Get the metadata
-    upload := MultipartUpload{}
+		upload := MultipartUpload{}
     if err := upload.get( b, uploadId ); err != nil {
 			return err
 		}
@@ -173,21 +172,25 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
       b.Delete( partKey )
       return err
     }
-
-    checksum := etag( body )
-
-    r.Status( 200 ).
-      AddHeader( "Access-Control-Allow-Origin", "*" ).
-      AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-      AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-      AddHeader( "Connection", "keep-alive" ).
-      AddHeader( "Server", "AmazonS3" ).
-      AddHeader( "Content-MD5", checksum ).
-      AddHeader( "Content-Length", "0" ).
-      Etag( checksum )
-
-    return nil
+		return nil
   } )
+	if err != nil {
+		return err
+	}
+
+	checksum := etag( body )
+
+	r.Status( 200 ).
+		AddHeader( "Access-Control-Allow-Origin", "*" ).
+		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
+		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
+		AddHeader( "Connection", "keep-alive" ).
+		AddHeader( "Server", "AmazonS3" ).
+		AddHeader( "Content-MD5", checksum ).
+		AddHeader( "Content-Length", "0" ).
+		Etag( checksum )
+
+	return nil
 }
 
 func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
@@ -269,7 +272,7 @@ func (s *ObjectStore) completeMultipart( r *rest.Rest ) error {
     r.Status( 200 ).
       XML().
       Value( &CompleteMultipartUploadResult{
-        Location: "///",
+        Location: "/" + bucketName + "/" + obj.Name,
         Bucket: bucketName,
         Key: obj.Name,
         ETag: obj.ETag,

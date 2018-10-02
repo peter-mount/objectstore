@@ -19,3 +19,11 @@ func InvalidPart() *Error {
     Message:  "One or more of the specified parts could not be found. The part might not have been uploaded, or the specified entity tag might not have matched the part's entity tag.",
   }
 }
+
+func NoSuchKey() *Error {
+	return &Error{
+    Status:   http.StatusNotFound,
+    Code:     "NoSuchKey",
+    Message:  "The specified key does not exist.",
+  }
+}

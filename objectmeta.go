@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
   "fmt"
   "github.com/peter-mount/golib/kernel/bolt"
+  "github.com/peter-mount/objectstore/awserror"
 	"gopkg.in/mgo.v2/bson"
   "time"
 )
@@ -67,19 +68,17 @@ func (o *Object) putPart( b *bolt.Bucket, body []byte ) error {
 }
 
 // get retrieves an object's metadata
-func (o *Object) get( b *bolt.Bucket, objectName string ) (bool,error) {
+func (o *Object) get( b *bolt.Bucket, objectName string ) error {
 	v := b.Get( meta_prefix + objectName )
 	if v == nil {
-		return false, nil
+		return awserror.NoSuchKey()
 	}
-	e, err := o.getBytes( v )
-	return e, err
+	return o.getBytes( v )
 }
 
 // Unmarshal the metadata - usually used with a Cursor
-func (o *Object) getBytes( v []byte ) (bool,error) {
-	err := bson.Unmarshal(v, o)
-	return err == nil, err
+func (o *Object) getBytes( v []byte ) error {
+	return bson.Unmarshal(v, o)
 }
 
 // getObject returns the entire object a a byte slice

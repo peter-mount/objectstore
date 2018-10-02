@@ -87,7 +87,7 @@ func (s *ObjectStore) createObject( r *rest.Rest, method, bucketName, objectName
 
 		// Remove any existing object
 		obj := &Object{}
-		if exists, _ := obj.get( b, objectName ); exists {
+		if err = obj.get( b, objectName ); err == nil {
 			obj.delete( b )
 		}
 
@@ -139,48 +139,42 @@ func (s *ObjectStore) HeadObject( r *rest.Rest ) error {
   bucketName := r.Var( "BucketName" )
   objectName := r.Var( "ObjectName" )
 
-	return s.boltService.View( func( tx *bolt.Tx ) error {
+  t := Object{}
+	err := s.boltService.View( func( tx *bolt.Tx ) error {
     b, err := s.getBucket( tx, bucketName )
     if err != nil {
       return err
     }
 
     // Get the metadata
-		t := Object{}
-		exists, err := t.get( b, objectName )
-		if !exists  {
-      r.Status( 404 )
-      // TODO gofakes returned 500 here
-			return nil
-		}
-		if err != nil {
-      r.Status( 500 )
-			return err
-		}
+		return t.get( b, objectName )
+  } )
+	if err != nil {
+		return err
+	}
 
-    r.Status( 200 ).
-			CacheControl( -1 ).
-			AddHeader( "Accept-Ranges", "bytes" ).
-  		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-  		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" )
+  r.Status( 200 ).
+		CacheControl( -1 ).
+		AddHeader( "Accept-Ranges", "bytes" ).
+		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
+		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" )
 
-		t.addHeaders( r )
+	t.addHeaders( r )
 
-		r.AddHeader( "Last-Modified", t.LastModified.Format(http.TimeFormat) ).
-  		Etag( t.ETag ).
-  		AddHeader( "Server", "AmazonS3" ).
-			AddHeader( "Content-Length", fmt.Sprintf("%v", t.Length ) )
+	r.AddHeader( "Last-Modified", t.LastModified.Format(http.TimeFormat) ).
+		Etag( t.ETag ).
+		AddHeader( "Server", "AmazonS3" ).
+		AddHeader( "Content-Length", fmt.Sprintf("%v", t.Length ) )
 
-		return nil
-	})
+	return nil
 }
 
 // GetObject retrievs a bucket object.
 func (s *ObjectStore) GetObject( r *rest.Rest ) error {
-	return s.boltService.View( func( tx *bolt.Tx ) error {
-		bucketName := r.Var( "BucketName" )
-		objectName := r.Var( "ObjectName" )
+  bucketName := r.Var( "BucketName" )
+  objectName := r.Var( "ObjectName" )
 
+	return s.boltService.View( func( tx *bolt.Tx ) error {
     b, err := s.getBucket( tx, bucketName )
     if err != nil {
       return err
@@ -188,16 +182,10 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 
     // Get the metadata
 		t := Object{}
-		exists, err := t.get( b, objectName )
-		if !exists  {
-      r.Status( 404 )
-      // TODO gofakes returned 500 here
-			return nil
-		}
-		if err != nil {
-      r.Status( 500 )
-			return err
-		}
+		err = t.get( b, objectName )
+    if err != nil {
+      return err
+    }
 
 		// Request is asking for a specific range in the object
 		if rng, ok := r.Request().Header["Range"]; ok {
@@ -251,27 +239,35 @@ func (s *ObjectStore) DeleteObject( r *rest.Rest ) error {
   bucketName := r.Var( "BucketName" )
   objectName := r.Var( "ObjectName" )
 
-	return s.boltService.Update( func( tx *bolt.Tx ) error {
+  obj := &Object{}
+
+	err := s.boltService.Update( func( tx *bolt.Tx ) error {
     b, err := s.getBucket( tx, bucketName )
     if err != nil {
       return err
     }
 
-		obj := &Object{}
-		if exists, _ := obj.get( b, objectName ); exists {
-			obj.delete( b )
+		err = obj.get( b, objectName )
+    if err != nil {
+      return err
+    }
 
-      s.sendObjectEvent( "ObjectRemoved:Delete", bucketName, obj )
-		}
-
-    r.Status( 204 ).
-  		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-  		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-  		AddHeader( "Content-Length", "0" ).
-  		AddHeader( "Connection", "close" )
-
-		return nil
+		obj.delete( b )
+    return nil
 	})
+  if err != nil {
+    return err
+  }
+
+  s.sendObjectEvent( "ObjectRemoved:Delete", bucketName, obj )
+
+  r.Status( 204 ).
+    AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
+    AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
+    AddHeader( "Content-Length", "0" ).
+    AddHeader( "Connection", "close" )
+
+  return nil
 }
 
 // range handles converting the range header
