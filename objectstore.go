@@ -54,10 +54,10 @@ const (
 	// when listing a bucket with a large objects as we can filter by prefix in
 	// bbolt but not by suffix
 	meta_prefix         = "meta\001"
+	// Suffix used to represent a multipart uplaod
+	partmeta_prefix			= "upload\001"
 	// Part suffix, used for multipart upload parts, prefix is the UploadId
-	part_suffix					= "\001part"
-	// Meta suffix used to represent a multipart uplaod
-	partmeta_suffix			= "\001partmeta"
+	partmeta_suffix			= "\002"
 	// The block size used when reading MultipartForm
 	size_24K = (1 << 20) * 24
 )

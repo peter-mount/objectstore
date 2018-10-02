@@ -28,7 +28,7 @@ type MultipartUpload struct {
 }
 
 func (u *MultipartUpload) get( b *bolt.Bucket, uploadId string ) error {
-	v := b.Get( uploadId + partmeta_suffix )
+	v := b.Get( partmeta_prefix + uploadId )
 	if v == nil {
 		return awserror.NoSuchUpload()
 	}
@@ -42,14 +42,14 @@ func (u *MultipartUpload) put( b *bolt.Bucket ) error {
     return err
   }
 
-  return b.Put( u.UploadId + partmeta_suffix, v )
+  return b.Put( partmeta_prefix + u.UploadId, v )
 }
 
 func (u *MultipartUpload) delete( b *bolt.Bucket ) error {
 	for _,n := range u.Parts {
 		b.Delete( n )
 	}
-	return b.Delete( u.UploadId + partmeta_suffix )
+	return b.Delete( partmeta_prefix + u.UploadId )
 }
 
 type InitiateMultipartUploadResult struct {
@@ -161,7 +161,7 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 			return err
 		}
 
-    partKey := uploadId + part_suffix + partNumber
+    partKey := partmeta_prefix + uploadId + partmeta_suffix + partNumber
     upload.Parts[partNumber] = partKey
 
     if err := b.Put( partKey, body ); err != nil {
