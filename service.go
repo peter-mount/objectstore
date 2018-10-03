@@ -62,8 +62,8 @@ func (s *ObjectStore) PostInit() error {
     *s.region = "us-east-1"
   }
 
-  // todo Add support to rest for this
-  //r.Queries( "marker", "prefix" )
+  // Add a request id to responses
+  s.restService.Use( rest.RequestID( rest.DefaultIDGenerator ) )
 
   // Note: trailing / required by minio client whilst s3 client doesn't use that
   // List all buckets
@@ -75,6 +75,7 @@ func (s *ObjectStore) PostInit() error {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Amz-User-Agent, X-Amz-Date, x-amz-meta-from, x-amz-meta-to, x-amz-meta-filename, x-amz-meta-private",
       "X-Clacks-Overhead": "GNU Terry Pratchett",
+      "Server": "Area51ObjectStore",
     }).Decorator )
 
   // Bucket operations
@@ -172,7 +173,6 @@ func (s *ObjectStore) PostInit() error {
     Handler( s.HeadObject ).
     Build()
 
-  // Get object
   builder.
     // Get Object ACL
     Method( "GET" ).
@@ -180,6 +180,15 @@ func (s *ObjectStore) PostInit() error {
     Queries( "acl", "").
     Handler( s.getObjectAcl ).
     Build().
+    // Put Object ACL
+    Method( "PUT" ).
+    Path( "/{BucketName}/{ObjectName:.{1,}}" ).
+    Queries( "acl", "").
+    Handler( s.putObjectAcl ).
+    Build()
+
+  // Get object
+  builder.
     // Get object
     Method( "GET" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).

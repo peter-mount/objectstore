@@ -118,10 +118,6 @@ func (s *ObjectStore) initiateMultipart( r *rest.Rest ) error {
 	}
 
 	r.Status( 200 ).
-		AddHeader( "Access-Control-Allow-Origin", "*" ).
-		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-		AddHeader( "Server", "AmazonS3" ).
 		XML().
 		Value( &InitiateMultipartUploadResult{
 			Bucket: bucketName,
@@ -181,11 +177,7 @@ func (s *ObjectStore) uploadPart( r *rest.Rest ) error {
 	checksum := etag( body )
 
 	r.Status( 200 ).
-		AddHeader( "Access-Control-Allow-Origin", "*" ).
-		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
 		AddHeader( "Connection", "keep-alive" ).
-		AddHeader( "Server", "AmazonS3" ).
 		AddHeader( "Content-MD5", checksum ).
 		AddHeader( "Content-Length", "0" ).
 		Etag( checksum )

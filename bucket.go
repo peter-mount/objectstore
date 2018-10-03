@@ -80,10 +80,7 @@ func (s *ObjectStore) DeleteBucket( r *rest.Rest ) error {
     return err
   }
 
-  r.Status( 200 ).
-    AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-    AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-    AddHeader( "Server", "AmazonS3" )
+  r.Status( 200 )
 
 	return nil
 }
@@ -101,10 +98,7 @@ func (s *ObjectStore) HeadBucket( r *rest.Rest ) error {
     return err
   }
 
-  r.Status( 200 ).
-    AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-    AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-    AddHeader( "Server", "AmazonS3" )
+  r.Status( 200 )
 
   return nil
 }

@@ -115,10 +115,7 @@ func (s *ObjectStore) createObject( r *rest.Rest, method, bucketName, objectName
     s.sendObjectEvent( "ObjectCreated:" + method, bucketName, obj )
 
 		r.Status( 200 ).
-  		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-  		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
-			Etag( obj.ETag ).
-			AddHeader( "Server", "AmazonS3" )
+			Etag( obj.ETag )
 
 		return nil
 	})
@@ -155,15 +152,12 @@ func (s *ObjectStore) HeadObject( r *rest.Rest ) error {
 
   r.Status( 200 ).
 		CacheControl( -1 ).
-		AddHeader( "Accept-Ranges", "bytes" ).
-		AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" )
+		AddHeader( "Accept-Ranges", "bytes" )
 
 	t.addHeaders( r )
 
 	r.AddHeader( "Last-Modified", t.LastModified.Format(http.TimeFormat) ).
 		Etag( t.ETag ).
-		AddHeader( "Server", "AmazonS3" ).
 		AddHeader( "Content-Length", fmt.Sprintf("%v", t.Length ) )
 
 	return nil
@@ -223,12 +217,8 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
 
     r.CacheControl( -1 ).
 			AddHeader( "Accept-Ranges", "bytes" ).
-			AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-  		AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
 			AddHeader( "Last-Modified", t.LastModified.Format(http.TimeFormat) ).
-			Etag( t.ETag ).
-			AddHeader( "Server", "AmazonS3" )
-			//Value( v )
+			Etag( t.ETag )
 
 		return nil
 	})
@@ -262,8 +252,6 @@ func (s *ObjectStore) DeleteObject( r *rest.Rest ) error {
   s.sendObjectEvent( "ObjectRemoved:Delete", bucketName, obj )
 
   r.Status( 204 ).
-    AddHeader( "x-amz-id-2", "LriYPLdmOdAiIfgSm/F1YsViT1LW94/xUQxMsF7xiEb1a0wiIOIxl+zbwZ163pt7" ).
-    AddHeader( "x-amz-request-id", "0A49CE4060975EAC" ).
     AddHeader( "Content-Length", "0" ).
     AddHeader( "Connection", "close" )
 
