@@ -142,8 +142,14 @@ func (s *ObjectStore) PostInit() error {
     Handler( s.abortMultipart ).
     Build()
 
-    // Object upload - non multipart
   builder.
+    // copy object
+    Method( "PUT" ).
+    Path( "/{DestBucketName}/{DestObjectName:.{1,}}" ).
+    Headers( "X-Amz-Copy-Source", "" ).
+    Handler( s.copyObject ).
+    Build().
+    // Object upload - non multipart
     Method( "PUT" ).
     Path( "/{BucketName}/{ObjectName:.{1,}}" ).
     Handler( s.uploadObject ).
