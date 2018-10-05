@@ -20,11 +20,7 @@ Full details is in the These are in the [wiki](https://github.com/peter-mount/ob
 
 ## Supported clients
 
-These are now listed in the [wiki](https://github.com/peter-mount/objectstore/wiki/ClientSupport)
-
-## ToDo
-* Add authentication
-* Add ACL control
+These are now listed in the [wiki](https://github.com/peter-mount/objectstore/wiki/ClientSupport) but currently common command line tools like aws cli, minio mc & s3cmd are supported as is s3fs fuse filesystem
 
 ## Similar notable projects
 - https://github.com/johannesboyne/gofakes3 also written in Go & where I started this from
