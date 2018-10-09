@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
   "github.com/peter-mount/golib/kernel/bolt"
   "github.com/peter-mount/golib/rest"
+  "github.com/peter-mount/objectstore/awserror"
 	"strings"
   "time"
 )
@@ -20,6 +21,10 @@ func (s *ObjectStore) copyObject( r *rest.Rest ) error {
 	// As we can't have name values in Headers
 	// "/{srcBucketName}/{srcObjectName:.{1,}}"
 	src := strings.SplitN( r.GetHeader( "X-Amz-Copy-Source" ), "/", 3 )
+	// This can be caused by an invalid client request
+	if len( src ) != 3 {
+		return awserror.InternalError()
+	}
 	srcBucketName, srcObjectName := src[1], src[2]
 
   destBucketName := r.Var( "DestBucketName" )
