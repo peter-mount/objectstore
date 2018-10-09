@@ -17,6 +17,7 @@ type ObjectStore struct {
 	timeLocation   *time.Location
 
 	region				*string
+	website				*bool
 }
 
 type Storage struct {

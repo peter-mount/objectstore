@@ -19,6 +19,7 @@ func (s *ObjectStore) Name() string {
 func (s *ObjectStore) Init( k *kernel.Kernel ) error {
 
   s.region = flag.String( "region", "", "Region")
+  s.website = flag.Bool( "website", false, "Website mode")
 
   timeLocation, err := time.LoadLocation("GMT")
 	if err != nil {

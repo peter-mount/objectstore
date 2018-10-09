@@ -168,6 +168,10 @@ func (s *ObjectStore) GetObject( r *rest.Rest ) error {
   bucketName := r.Var( "BucketName" )
   objectName := r.Var( "ObjectName" )
 
+  if *s.website && (objectName == "" || objectName[len(objectName)-1] == '/' ) {
+    objectName = objectName + "index.html"
+  }
+
 	return s.boltService.View( func( tx *bolt.Tx ) error {
     b, err := s.getBucket( tx, bucketName )
     if err != nil {
