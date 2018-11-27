@@ -15,7 +15,8 @@ FROM golang:alpine as build
 RUN apk add --no-cache \
       curl \
       git \
-      tzdata
+      tzdata \
+      zip
 
 # Ensure we have the libraries - docker will cache these between builds
 RUN go get -v \
