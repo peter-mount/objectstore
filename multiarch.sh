@@ -19,15 +19,23 @@ shift
 VERSION=$1
 shift
 
+MODULE=$1
+shift
+
 # The final multiarch image
-MULTIIMAGE=${IMAGE}:${VERSION}
+if [ "$MODULE" = "Build" ]
+then
+  MULTIIMAGE=${IMAGE}:${VERSION}
+else
+  MULTIIMAGE=${IMAGE}:${MODULE}-${VERSION}
+fi
 
 . functions.sh
 
 CMD="docker manifest create -a ${MULTIIMAGE}"
 for arch in $@
 do
-  CMD="$CMD $(dockerImage $arch)"
+  CMD="$CMD $(dockerImage $arch $MODULE)"
 done
 execute $CMD
 
@@ -40,7 +48,7 @@ do
   CMD="$CMD --os linux"
   CMD="$CMD --arch $(goarch $arch)"
   CMD="$CMD $MULTIIMAGE"
-  CMD="$CMD $(dockerImage $arch)"
+  CMD="$CMD $(dockerImage $arch $module)"
   execute $CMD
 done
 

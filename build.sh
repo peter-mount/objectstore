@@ -15,9 +15,15 @@
 IMAGE=$1
 ARCH=$2
 VERSION=$3
+MODULE=$4
 
 # The actual image being built
-TAG=${IMAGE}:${ARCH}-${VERSION}
+if [ "$MODULE" = "Build" ]
+then
+  TAG=${IMAGE}:${ARCH}-${VERSION}
+else
+  TAG=${IMAGE}:${ARCH}-${MODULE}-${VERSION}
+fi
 
 . functions.sh
 
@@ -31,6 +37,12 @@ CMD="$CMD --build-arg goos=linux"
 
 CMD="$CMD --build-arg goarch=$(goarch $ARCH)"
 CMD="$CMD --build-arg goarm=$(goarm $ARCH)"
+
+# Multiple module support
+if [ "$MODULE" != "Build" ]
+then
+  CMD="$CMD --build-arg module=$MODULE"
+fi
 
 # Upload a tar file as part of the build
 if [ -n "${UPLOAD_CRED}" -a -n "${JOB_NAME}" ]
