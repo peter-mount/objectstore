@@ -2,3 +2,5 @@ run.sh
 compile.sh
 env
 event-config.yaml
+cert
+test.sh
