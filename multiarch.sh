@@ -46,7 +46,7 @@ do
 
   CMD="docker manifest annotate"
   CMD="$CMD --os linux"
-  CMD="$CMD --arch $(goarch $arch)"
+  CMD="$CMD --arch $arch"
   CMD="$CMD $MULTIIMAGE"
   CMD="$CMD $(dockerImage $arch $module)"
   execute $CMD
