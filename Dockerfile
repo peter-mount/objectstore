@@ -60,6 +60,21 @@ RUN CGO_ENABLED=0 \
       github.com/peter-mount/objectstore/bin
 
 # ============================================================
+# Optional stage, upload the binaries as a tar file
+FROM compiler AS upload
+ARG uploadPath=
+ARG uploadCred=
+ARG uploadName=
+RUN if [ -n "${uploadCred}" -a -n "${uploadPath}" -a -n "${uploadName}" ] ;\
+    then \
+      cd /dest/bin; \
+      tar cvzpf /tmp/${uploadName}.tgz * && \
+      zip /tmp/${uploadName}.zip * && \
+      curl -u ${uploadCred} --upload-file /tmp/${uploadName}.tgz ${uploadPath}/ && \
+      curl -u ${uploadCred} --upload-file /tmp/${uploadName}.zip ${uploadPath}/; \
+    fi
+
+# ============================================================
 # This is the final image
 FROM alpine
 RUN apk add --no-cache tzdata
