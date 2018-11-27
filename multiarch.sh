@@ -46,7 +46,13 @@ do
 
   CMD="docker manifest annotate"
   CMD="$CMD --os linux"
-  CMD="$CMD --arch $arch"
+  CMD="$CMD --arch $(goarch $arch)"
+
+  if [ "$(goarch $arch)" = "arm" ]
+  then
+    CMD="$CMD --variant v$(goarm $arch)"
+  fi
+
   CMD="$CMD $MULTIIMAGE"
   CMD="$CMD $(dockerImage $arch $module)"
   execute $CMD
