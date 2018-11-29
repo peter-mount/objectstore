@@ -16,7 +16,10 @@ RUN apk add --no-cache \
       curl \
       git \
       tzdata \
-      zip
+      zip &&\
+    if [ -n "${HTTP_PROXY}" ]; then \
+      git config --global http.proxy $HTTP_PROXY ;\
+    fi
 
 # Ensure we have the libraries - docker will cache these between builds
 RUN go get -v \
