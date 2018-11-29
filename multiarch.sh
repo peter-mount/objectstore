@@ -54,7 +54,14 @@ do
   fi
 
   CMD="$CMD $MULTIIMAGE"
-  CMD="$CMD $(dockerImage $arch $module)"
+
+  if [ "$MODULE" = "Build" ]
+  then
+    CMD="$CMD ${IMAGE}:${ARCH}-${VERSION}"
+  else
+    CMD="$CMD ${IMAGE}:${MODULE}-${ARCH}-${VERSION}"
+  fi
+
   execute $CMD
 done
 

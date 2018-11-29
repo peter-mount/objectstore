@@ -22,7 +22,7 @@ if [ "$MODULE" = "Build" ]
 then
   TAG=${IMAGE}:${ARCH}-${VERSION}
 else
-  TAG=${IMAGE}:${ARCH}-${MODULE}-${VERSION}
+  TAG=${IMAGE}:${MODULE}-${ARCH}-${VERSION}
 fi
 
 . functions.sh
@@ -60,7 +60,16 @@ then
     repoPath=$(dirname $repoPath)
   fi
 
-  repoName="$(basename $repoPath)-${ARCH}-${BRANCH_NAME}"
+  repoName="$(basename $repoPath)"
+  if [ "$MODULE" != "Build" ]
+  then
+    repoName="${repoName}-${MODULE}"
+  fi
+  repoName="${repoName}-${ARCH}"
+  if [ -n "${BRANCH_NAME}" ]
+  then
+    repoName="${repoName}-${BRANCH_NAME}"
+  fi
   if [ -n "${BUILD_NUMBER}" ]
   then
     repoName="${repoName}.${BUILD_NUMBER}"
