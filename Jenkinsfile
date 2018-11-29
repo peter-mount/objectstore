@@ -25,7 +25,8 @@ imagePrefix = 'objectstore'
 // The architectures to build. This is an array of [node,arch]
 architectures = [
  ['AMD64', 'amd64'],
- ['ARM64', 'arm64v8']
+ ['ARM64', 'arm64v8'],
+ ['ARM32v7', 'arm32v7']
 ]
 
 // The modules to build.
