@@ -88,6 +88,8 @@ if( repository != '' ) {
       builders[mod] = {
         node( 'AMD64' ) {
           stage( mod ) {
+            checkout scm
+
             sh './multiarch.sh' +
               ' ' + imageTag +
               ' ' + version +
