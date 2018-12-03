@@ -41,8 +41,15 @@ execute $CMD
 
 for arch in $@
 do
+  if [ "$MODULE" = "Build" ]
+  then
+    TAG="${IMAGE}:${ARCH}-${VERSION}"
+  else
+    TAG="${IMAGE}:${MODULE}-${ARCH}-${VERSION}"
+  fi
+  
   # ensure this node has the latest image for this architecture
-  execute "docker pull $(dockerImage $arch)"
+  execute "docker pull ${TAG}"
 
   CMD="docker manifest annotate"
   CMD="$CMD --os linux"
@@ -53,14 +60,7 @@ do
     CMD="$CMD --variant v$(goarm $arch)"
   fi
 
-  CMD="$CMD $MULTIIMAGE"
-
-  if [ "$MODULE" = "Build" ]
-  then
-    CMD="$CMD ${IMAGE}:${ARCH}-${VERSION}"
-  else
-    CMD="$CMD ${IMAGE}:${MODULE}-${ARCH}-${VERSION}"
-  fi
+  CMD="$CMD $MULTIIMAGE $TAG"
 
   execute $CMD
 done
