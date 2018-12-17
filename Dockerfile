@@ -19,19 +19,26 @@ RUN apk add --no-cache \
       zip
 
 # Ensure we have the libraries - docker will cache these between builds
-RUN go get -v \
-      github.com/peter-mount/go-glob \
-      github.com/peter-mount/golib/... \
-      github.com/peter-mount/sortfold \
-      gopkg.in/mgo.v2/bson \
-      gopkg.in/robfig/cron.v2 \
-      gopkg.in/yaml.v2
+#RUN go get -v \
+#      github.com/peter-mount/go-glob \
+#      github.com/peter-mount/golib/... \
+#      github.com/peter-mount/sortfold \
+#      gopkg.in/mgo.v2/bson \
+#      gopkg.in/robfig/cron.v2 \
+#      gopkg.in/yaml.v2
 
 # ============================================================
 # source container contains the source as it exists within the
 # repository.
 FROM build as source
-WORKDIR /go/src/github.com/peter-mount/objectstore
+#WORKDIR /go/src/github.com/peter-mount/objectstore
+WORKDIR /work
+
+# Download dependencies before copying any sources then we
+# can use the docker cache to limit updates
+ADD go.mod .
+RUN go mod download
+
 ADD . .
 
 # ============================================================
@@ -39,6 +46,7 @@ ADD . .
 # the final build.
 FROM source as test
 
+WORKDIR /work
 RUN go test -v \
       github.com/peter-mount/objectstore/policy \
       github.com/peter-mount/objectstore/utils
@@ -50,6 +58,7 @@ ARG arch
 ARG goos
 ARG goarch
 ARG goarm
+WORKDIR /work
 
 # NB: CGO_ENABLED=0 forces a static build
 RUN CGO_ENABLED=0 \
