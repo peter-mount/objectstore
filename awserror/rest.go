@@ -1,7 +1,7 @@
 package awserror
 
 import (
-	bbolt "github.com/coreos/bbolt"
+	bbolt "github.com/etcd-io/bbolt"
   "github.com/peter-mount/golib/rest"
 	"log"
 )
