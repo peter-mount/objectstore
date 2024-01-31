@@ -21,7 +21,7 @@ RUN apk add --no-cache \
 # Ensure we have the libraries - docker will cache these between builds
 #RUN go get -v \
 #      github.com/peter-mount/go-glob \
-#      github.com/peter-mount/golib/... \
+#      github.com/peter-mount/go-kernel/v2/... \
 #      github.com/peter-mount/sortfold \
 #      gopkg.in/mgo.v2/bson \
 #      gopkg.in/robfig/cron.v2 \

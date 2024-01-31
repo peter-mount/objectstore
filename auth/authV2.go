@@ -1,17 +1,17 @@
 package auth
 
 import (
-  "bytes"
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
-  "encoding/base64"
-  "fmt"
-  "github.com/peter-mount/golib/rest"
-  "github.com/peter-mount/objectstore/awserror"
-  "net/http"
-  "net/url"
-  "sort"
-  "strings"
+	"encoding/base64"
+	"fmt"
+	"github.com/peter-mount/go-kernel/v2/rest"
+	"github.com/peter-mount/objectstore/awserror"
+	"net/http"
+	"net/url"
+	"sort"
+	"strings"
 )
 
 // Signature and API related constants.
@@ -20,19 +20,19 @@ const (
 )
 
 // Encode input URL path to URL encoded path.
-func encodeURL2Path( req *http.Request ) string {
-	return encodePath( req.URL.Path )
+func encodeURL2Path(req *http.Request) string {
+	return encodePath(req.URL.Path)
 }
 
-func stringToSignV2( r *rest.Rest ) string {
+func stringToSignV2(r *rest.Rest) string {
 	buf := new(bytes.Buffer)
-  req := r.Request()
+	req := r.Request()
 
 	// Write standard headers.
-  buf.WriteString(req.Method + "\n")
-  buf.WriteString(req.Header.Get("Content-Md5") + "\n")
-  buf.WriteString(req.Header.Get("Content-Type") + "\n")
-  buf.WriteString(req.Header.Get("Date") + "\n")
+	buf.WriteString(req.Method + "\n")
+	buf.WriteString(req.Header.Get("Content-Md5") + "\n")
+	buf.WriteString(req.Header.Get("Content-Type") + "\n")
+	buf.WriteString(req.Header.Get("Date") + "\n")
 
 	// Write canonicalized protocol headers if any.
 	writeCanonicalizedHeaders(buf, req)
@@ -110,8 +110,9 @@ var resourceList = []string{
 // From the Amazon docs:
 //
 // CanonicalizedResource = [ "/" + Bucket ] +
-// 	  <HTTP-Request-URI, from the protocol name up to the query string> +
-// 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
+//
+//	<HTTP-Request-URI, from the protocol name up to the query string> +
+//	[ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 func writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request) {
 	// Save request URL.
 	requestURL := req.URL
@@ -161,10 +162,10 @@ func writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request) {
 // CanonicalizedProtocolHeaders = <described below>
 
 // SignV2 sign the request before Do() (AWS Signature Version 2).
-func signV2( r *rest.Rest, accessKeyID, secretAccessKey string ) (string,error) {
+func signV2(r *rest.Rest, accessKeyID, secretAccessKey string) (string, error) {
 
 	// Calculate HMAC for secretAccessKey.
-	stringToSign := stringToSignV2( r )
+	stringToSign := stringToSignV2(r)
 
 	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(stringToSign))
@@ -178,28 +179,28 @@ func signV2( r *rest.Rest, accessKeyID, secretAccessKey string ) (string,error) 
 	encoder.Close()
 
 	// Authorization header.
-  return authHeader.String(), nil
+	return authHeader.String(), nil
 }
 
 // Creates an AWS signature version 4 credential
-//https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
-func (s *AuthService) getAWS2CredentialHeader( authorization string, r *rest.Rest ) (*Credential,error) {
+// https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
+func (s *AuthService) getAWS2CredentialHeader(authorization string, r *rest.Rest) (*Credential, error) {
 
-  a := strings.SplitN( authorization, " ", 2 )
-  a = strings.SplitN( a[1], ":", 2 )
-  user := s.getUser( a[0] )
-  if user == nil {
-    return nil, awserror.InvalidAccessKeyId()
-  }
+	a := strings.SplitN(authorization, " ", 2)
+	a = strings.SplitN(a[1], ":", 2)
+	user := s.getUser(a[0])
+	if user == nil {
+		return nil, awserror.InvalidAccessKeyId()
+	}
 
-  signature, err := signV2( r, user.AccessKey, user.SecretKey )
-  if err != nil {
-    return nil, err
-  }
+	signature, err := signV2(r, user.AccessKey, user.SecretKey)
+	if err != nil {
+		return nil, err
+	}
 
-  if signature != authorization {
-    return nil, awserror.AccessDenied()
-  }
+	if signature != authorization {
+		return nil, awserror.AccessDenied()
+	}
 
-  return userCredential( user ), nil
+	return userCredential(user), nil
 }

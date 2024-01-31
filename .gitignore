@@ -4,3 +4,8 @@ env
 event-config.yaml
 cert
 test.sh
+
+/build
+/builds/
+/dist/
+/Makefile.gen

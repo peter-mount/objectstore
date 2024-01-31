@@ -3,28 +3,28 @@ package auth
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-  "encoding/hex"
-  "github.com/peter-mount/golib/rest"
+	"encoding/hex"
+	"github.com/peter-mount/go-kernel/v2/rest"
 	"regexp"
-  "strings"
-  "unicode/utf8"
+	"strings"
+	"unicode/utf8"
 )
 
 // unsignedPayload - value to be set to X-Amz-Content-Sha256 header when
 const (
-  unsignedPayload   = "UNSIGNED-PAYLOAD"
-  iso8601DateFormat = "20060102T150405Z"
+	unsignedPayload   = "UNSIGNED-PAYLOAD"
+	iso8601DateFormat = "20060102T150405Z"
 	yyyymmdd          = "20060102"
 )
 
 // if object matches reserved string, no need to encode them
 var reservedObjectNames = regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
 
-func getSigningDate( r *rest.Rest ) string {
-  v, ok := r.Request().Header["X-Amz-Date"]
-  if !ok {
-    v, ok = r.Request().Header["Date"]
-  }
+func getSigningDate(r *rest.Rest) string {
+	v, ok := r.Request().Header["X-Amz-Date"]
+	if !ok {
+		v, ok = r.Request().Header["Date"]
+	}
 	return v[0]
 }
 
@@ -56,7 +56,7 @@ func getScope(location string, t string) string {
 
 // getHashedPayload get the hexadecimal value of the SHA256 hash of
 // the request payload.
-func getHashedPayload( r *rest.Rest ) string {
+func getHashedPayload(r *rest.Rest) string {
 	hashedPayload := r.Request().Header.Get("X-Amz-Content-Sha256")
 	if hashedPayload == "" {
 		// Presign does not have a payload, use S3 recommended value.
@@ -86,8 +86,8 @@ func sumHMAC(key []byte, data []byte) []byte {
 }
 
 // getHostAddr returns host header if available, otherwise returns host from URL
-func getHostAddr( r *rest.Rest ) string {
-  req := r.Request()
+func getHostAddr(r *rest.Rest) string {
+	req := r.Request()
 	if req.Host != "" {
 		return req.Host
 	}
