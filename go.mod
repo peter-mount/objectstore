@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/etcd-io/bbolt v1.3.3
-	github.com/peter-mount/go-build v0.0.0-20240131191154-d70208e66af6
+	github.com/peter-mount/go-build v0.0.0-20240201082537-00db099a6fa9
 	github.com/peter-mount/go-glob v0.0.0-20170128012129-256dc444b735
 	github.com/peter-mount/go-kernel/v2 v2.0.3-0.20231109105549-8a9638d5ef94
 	github.com/peter-mount/sortfold v0.2.1

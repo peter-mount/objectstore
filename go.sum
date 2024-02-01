@@ -19,6 +19,7 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/peter-mount/go-build v0.0.0-20240131191154-d70208e66af6 h1:c/8sX7Q0sjb8t8X5ohHkUh2nbMKopgFYW3eAcruy+HE=
 github.com/peter-mount/go-build v0.0.0-20240131191154-d70208e66af6/go.mod h1:apGFzH5KlXZ2qlbPJu2j2GdgQ78tjLREflKNCiPdbaI=
+github.com/peter-mount/go-build v0.0.0-20240201082537-00db099a6fa9/go.mod h1:MPbSg1kMnf9ZEuLmW3wOwL6Cv6ciWnI5OfPdqGtW3Ak=
 github.com/peter-mount/go-glob v0.0.0-20170128012129-256dc444b735 h1:QpAAxQdD+sU4e6eR51/j+X+PlHn83Q7D25WHSlBuJP0=
 github.com/peter-mount/go-glob v0.0.0-20170128012129-256dc444b735/go.mod h1:aYPyGx1MiwBE6VyKh0ZI86gs6slTCjLBmALWPrtH2tk=
 github.com/peter-mount/go-kernel/v2 v2.0.3-0.20231109105549-8a9638d5ef94 h1:Hsds2wVsJrEDp84aXDHDYdh/29UlQsAQLa8tjw3E3Z4=
