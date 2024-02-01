@@ -1,0 +1,6 @@
+block:
+  # Unsupported by bbolt
+  - os: aix
+  - os: linux
+    arch: loong64
+  - os: plan9

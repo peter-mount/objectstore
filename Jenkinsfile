@@ -20,9 +20,6 @@ node("go") {
   stage("Init") {
     sh 'make clean init test'
   }
-  stage("aix_ppc64") {
-    sh 'make -f Makefile.gen aix_ppc64'
-  }
   stage("darwin_amd64") {
     sh 'make -f Makefile.gen darwin_amd64'
   }
@@ -67,9 +64,6 @@ node("go") {
   }
   stage("linux_arm64") {
     sh 'make -f Makefile.gen linux_arm64'
-  }
-  stage("linux_loong64") {
-    sh 'make -f Makefile.gen linux_loong64'
   }
   stage("linux_mips") {
     sh 'make -f Makefile.gen linux_mips'
@@ -124,18 +118,6 @@ node("go") {
   }
   stage("openbsd_arm64") {
     sh 'make -f Makefile.gen openbsd_arm64'
-  }
-  stage("plan9_386") {
-    sh 'make -f Makefile.gen plan9_386'
-  }
-  stage("plan9_amd64") {
-    sh 'make -f Makefile.gen plan9_amd64'
-  }
-  stage("plan9_arm6") {
-    sh 'make -f Makefile.gen plan9_arm6'
-  }
-  stage("plan9_arm7") {
-    sh 'make -f Makefile.gen plan9_arm7'
   }
   stage("solaris_amd64") {
     sh 'make -f Makefile.gen solaris_amd64'
